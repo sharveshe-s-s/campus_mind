@@ -1,0 +1,15 @@
+streamlit
+streamlit-lottie
+streamlit-option-menu
+openai==1.14.2
+langchain==0.1.13
+langchain-community==0.0.29
+langchain-openai==0.1.1
+langchain-core==0.1.33
+faiss-cpu
+tiktoken
+pdfplumber
+google-api-python-client
+google-auth-httplib2
+google-auth-oauthlib
+pypdf
