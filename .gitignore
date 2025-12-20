@@ -1,0 +1,4 @@
+google_credentials.json
+.streamlit/
+__pycache__/
+faiss_index/
