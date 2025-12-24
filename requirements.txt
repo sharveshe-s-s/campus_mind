@@ -1,6 +1,7 @@
 streamlit
 streamlit-lottie
 streamlit-option-menu
+streamlit-mic-recorder
 requests
 pdfplumber
 google-auth
@@ -8,7 +9,6 @@ google-auth-oauthlib
 google-auth-httplib2
 google-api-python-client
 faiss-cpu
-# Pinning to 0.1.x series ensures your imports work without code changes
 langchain==0.1.20
 langchain-community==0.0.38
 langchain-openai==0.1.6
