@@ -1,10 +1,14 @@
 import streamlit as st
 from streamlit_lottie import st_lottie
 from streamlit_option_menu import option_menu
+from streamlit_mic_recorder import mic_recorder
 import requests
 import pdfplumber
+import io
+import os
 
-# --- STANDARD IMPORTS (Guaranteed to work with langchain==0.1.13) ---
+# --- STANDARD IMPORTS ---
+# These imports are compatible with langchain==0.1.20
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_openai import OpenAIEmbeddings
 from langchain_community.vectorstores import FAISS
@@ -12,15 +16,18 @@ from langchain_openai import ChatOpenAI
 from langchain.chains.question_answering import load_qa_chain
 from langchain_core.prompts import PromptTemplate 
 
+# Google Drive & Auth
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
-import os
+
+# OpenAI Client for Voice Transcription
+from openai import OpenAI
 
 # --- 1. CONFIGURATION & SECRETS ---
 st.set_page_config(page_title="CampusMind AI", page_icon="🎓", layout="wide")
 
-# LOAD SECRETS (Works for both Local & Cloud if configured correctly)
+# LOAD SECRETS
 try:
     if "OPENAI_API_KEY" in st.secrets:
         os.environ["OPENAI_API_KEY"] = st.secrets["OPENAI_API_KEY"]
@@ -65,7 +72,7 @@ st.markdown("""
 # --- 3. HELPER FUNCTIONS ---
 
 def load_lottieurl(url):
-    """Safely load Lottie animations without crashing"""
+    """Safely load Lottie animations"""
     try:
         r = requests.get(url, timeout=5)
         if r.status_code != 200:
@@ -75,13 +82,11 @@ def load_lottieurl(url):
         return None
 
 def upload_to_drive(file_path, file_name):
-    """Uploads using Secrets instead of a JSON file"""
+    """Uploads PDF to Google Drive"""
     try:
-        # Check if secrets exist
         if "gcp_service_account" not in st.secrets:
             return "Error: Google Credentials not found in Secrets!"
 
-        # Load credentials directly from the secrets dictionary
         key_dict = st.secrets["gcp_service_account"]
         creds = service_account.Credentials.from_service_account_info(
             key_dict, scopes=['https://www.googleapis.com/auth/drive'])
@@ -96,9 +101,36 @@ def upload_to_drive(file_path, file_name):
     except Exception as e:
         return f"Error: {e}"
 
+def get_recent_circulars():
+    """Fetches the names of the last 5 uploaded files from Google Drive"""
+    try:
+        if "gcp_service_account" not in st.secrets:
+            return []
+
+        key_dict = st.secrets["gcp_service_account"]
+        creds = service_account.Credentials.from_service_account_info(
+            key_dict, scopes=['https://www.googleapis.com/auth/drive'])
+        
+        service = build('drive', 'v3', credentials=creds)
+        
+        # Query: Inside specific folder, not trash, sorted by time desc
+        query = f"'{DRIVE_FOLDER_ID}' in parents and trashed=false"
+        results = service.files().list(
+            q=query,
+            pageSize=5,
+            fields="nextPageToken, files(id, name, createdTime)",
+            orderBy="createdTime desc"
+        ).execute()
+        
+        return results.get('files', [])
+    except Exception as e:
+        # Fail silently or log error so sidebar doesn't crash app
+        print(f"Drive Error: {e}")
+        return []
+
 def get_vector_store(text_chunks):
     """Converts text into vectors and saves them locally"""
-    embeddings = OpenAIEmbeddings()
+    embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
     vector_store = FAISS.from_texts(text_chunks, embedding=embeddings)
     vector_store.save_local("faiss_index")
 
@@ -115,6 +147,7 @@ def get_conversational_chain():
     
     Answer:
     """
+    # Updated to gpt-4o-mini for speed and cost efficiency
     model = ChatOpenAI(model="gpt-3.5-turbo", temperature=0.1) 
     prompt = PromptTemplate(template=prompt_template, input_variables=["context", "question"])
     return load_qa_chain(model, chain_type="stuff", prompt=prompt)
@@ -146,16 +179,26 @@ with st.sidebar:
                 "color": "white" 
             },
             "nav-link-selected": {"background-color": "#00C853"},
-            "menu-title": {
-                "color": "white", 
-                "font-size": "20px", 
-                "font-weight": "bold"
-            }
+            "menu-title": {"color": "white", "font-size": "20px", "font-weight": "bold"}
         }
     )
 
 # --- PAGE 1: STUDENT CHAT ---
 if selected == "Student Chat":
+    
+    # 1. SIDEBAR: RECENT CIRCULARS
+    with st.sidebar:
+        st.markdown("---")
+        st.subheader("📢 Recent Updates")
+        with st.spinner("Fetching updates..."):
+            recent_files = get_recent_circulars()
+            if recent_files:
+                for file in recent_files:
+                    st.markdown(f"📄 **{file['name']}**")
+            else:
+                st.info("No recent circulars found.")
+
+    # 2. HEADER
     col1, col2 = st.columns([1, 2])
     with col1:
         if lottie_hello:
@@ -164,27 +207,66 @@ if selected == "Student Chat":
             st.write("🤖") 
 
     with col2:
-        st.title("")
-        st.write("Welcome, Student! Ask me about:")
+        st.title("CampusMind AI")
+        st.write("Welcome, Student! Ask me about exams, bus routes, or fees.")
         st.markdown("""
         * 📅 **Exam Schedules**
-        * 🚌 **Bus Routes & Timings**
+        * 🚌 **Bus Routes**
         * 📝 **Syllabus & Fees**
         """)
 
     st.markdown("---") 
 
-    user_question = st.text_input("Type your query here...", placeholder="Ex: When is the revaluation deadline?")
+    # 3. INPUT AREA (Voice + Text)
+    mic_col, text_col = st.columns([1, 8])
+    
+    with mic_col:
+        st.write("🎙️ **Voice:**")
+        # Voice Recorder Button
+        audio = mic_recorder(
+            start_prompt="Record",
+            stop_prompt="Stop", 
+            key='recorder',
+            format="webm"
+        )
 
+    voice_text = ""
+    # Transcribe if audio exists
+    if audio:
+        with st.spinner("Transcribing..."):
+            try:
+                audio_file = io.BytesIO(audio['bytes'])
+                audio_file.name = "audio.webm"
+                
+                # OpenAI Client for Whisper
+                client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
+                transcript = client.audio.transcriptions.create(
+                    model="whisper-1", 
+                    file=audio_file
+                )
+                voice_text = transcript.text
+            except Exception as e:
+                st.error(f"Voice Error: {e}")
+
+    # Text Input (Pre-filled with voice text if available)
+    initial_text = voice_text if voice_text else ""
+    user_question = st.text_input("Type your query here...", value=initial_text, placeholder="Ex: When is the revaluation deadline?")
+
+    # 4. AI PROCESSING
     if user_question:
         with st.spinner("🧠 Analyzing circulars..."):
             try:
-                embeddings = OpenAIEmbeddings()
+                embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
                 if os.path.exists("faiss_index"):
                     new_db = FAISS.load_local("faiss_index", embeddings, allow_dangerous_deserialization=True)
                     docs = new_db.similarity_search(user_question)
                     chain = get_conversational_chain()
-                    response = chain({"input_documents": docs, "question": user_question}, return_only_outputs=True)
+                    
+                    # Using .invoke (New LangChain syntax)
+                    response = chain.invoke(
+                        {"input_documents": docs, "question": user_question},
+                        return_only_outputs=True
+                    )
                     
                     st.markdown(f"""
                     <div style="background-color: rgba(0, 200, 83, 0.2); padding: 20px; border-radius: 10px; border-left: 5px solid #00C853; margin-top: 20px;">
@@ -235,10 +317,10 @@ if selected == "Admin Portal":
                         status.update(label="Failed to Read PDF", state="error")
                         st.stop()
 
-                    # 2. GOOGLE DRIVE BACKUP (Using Secrets)
+                    # 2. GOOGLE DRIVE BACKUP
                     st.write(f"☁️ Backing up {pdf.name} to Google Drive...")
                     
-                    # Create temp file for upload
+                    # Create temp file
                     with open(pdf.name, "wb") as f:
                         f.write(pdf.getbuffer())
                     
@@ -270,11 +352,11 @@ if selected == "About":
     st.title("About this Project")
     st.markdown("""
     ### 🚀 Tech Stack
-    * **Frontend:** Streamlit (Python) with Custom CSS
-    * **AI Brain:** OpenAI GPT-4o + FAISS (Vector Database)
+    * **Frontend:** Streamlit (Python)
+    * **AI Brain:** OpenAI GPT-3.5-turbo + FAISS
     * **Cloud Storage:** Google Drive API V3
+    * **Voice:** OpenAI Whisper
     * **Backend Logic:** LangChain
     
     Built for **Open Innovation Hackathon 2024**.
     """)
-
