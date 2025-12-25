@@ -29,8 +29,7 @@ from openai import OpenAI
 # ==========================================
 def force_dark_mode():
     """
-    This function writes a config.toml file to FORCE Streamlit 
-    into Dark Mode. This fixes the contrast issues permanently.
+    Writes a config file to force Streamlit into Dark Mode.
     """
     config_dir = ".streamlit"
     config_path = os.path.join(config_dir, "config.toml")
@@ -38,7 +37,6 @@ def force_dark_mode():
     if not os.path.exists(config_dir):
         os.makedirs(config_dir)
         
-    # We overwrite the config to ensure these exact settings apply
     config_content = """
 [theme]
 base = "dark"
@@ -48,7 +46,6 @@ secondaryBackgroundColor = "#161b22"
 textColor = "#fafafa"
 font = "sans serif"
     """
-    # Only write if it's not already set to avoid constant reruns
     if not os.path.exists(config_path):
         with open(config_path, "w") as f:
             f.write(config_content)
@@ -118,9 +115,8 @@ st.markdown("""
         box-shadow: 0 0 20px #00C853;
         transform: scale(1.1);
     }
-    
+
     /* 5. PROCESS BUTTON (Pill Shape Override) */
-    /* We need to target the specific button in Admin Portal to look normal */
     .stButton button.process-btn {
         width: auto;
         border-radius: 8px;
@@ -198,7 +194,6 @@ def get_conversational_chain():
     return load_qa_chain(model, chain_type="stuff", prompt=prompt)
 
 # ASSETS
-# This is the "Cute Robot" animation from the first UI
 lottie_hello = load_lottieurl("https://lottie.host/5a919f2d-304b-4b15-9c8b-30234157d6b3/2k2k2k2k2k.json") 
 lottie_upload = load_lottieurl("https://assets2.lottiefiles.com/packages/lf20_w51pcehl.json")
 
@@ -227,7 +222,7 @@ with st.sidebar:
 # ==========================================
 if selected == "Student Chat":
     
-    # --- HERO HEADER WITH ANIMATION ---
+    # --- HERO HEADER ---
     col1, col2 = st.columns([1, 3])
     with col1:
         if lottie_hello: 
@@ -236,7 +231,7 @@ if selected == "Student Chat":
         st.markdown("<h1 style='padding-top: 20px; font-size: 50px;'>CampusMind AI</h1>", unsafe_allow_html=True)
         st.markdown("<p style='font-size: 18px; opacity: 0.8;'>Your 24/7 Smart Campus Assistant</p>", unsafe_allow_html=True)
 
-    st.write("") # Spacer
+    st.write("") 
 
     # --- RECENT UPDATES (GLASS CARDS) ---
     st.markdown("##### 📢 Recent Updates")
@@ -259,14 +254,13 @@ if selected == "Student Chat":
 
     st.markdown("---")
 
-    # --- CHAT INTERFACE (Aligned) ---
+    # --- CHAT INTERFACE ---
     st.markdown("##### 💬 Ask Anything")
     
-    # 10% Mic, 90% Input
     c_mic, c_input = st.columns([1, 10], gap="small")
     
     with c_mic:
-        st.write("") # Push down to align
+        st.write("") 
         audio = mic_recorder(start_prompt="🎙️", stop_prompt="⏹️", key='recorder', format="webm", just_once=True)
         
     with c_input:
@@ -283,7 +277,7 @@ if selected == "Student Chat":
         default_val = voice_text if voice_text else ""
         user_question = st.text_input("Search", value=default_val, placeholder="Ex: When are the exams?", label_visibility="collapsed")
 
-    # --- ANSWER SECTION (High Visibility) ---
+    # --- ANSWER SECTION ---
     if user_question:
         with st.spinner("🧠 Analyzing..."):
             try:
@@ -294,7 +288,7 @@ if selected == "Student Chat":
                     chain = get_conversational_chain()
                     response = chain.invoke({"input_documents": docs, "question": user_question}, return_only_outputs=True)
                     
-                    # THE FIX FOR INVISIBLE TEXT: Explicit White Color in CSS (.answer-box)
+                    # VISIBILITY FIX: .answer-box uses explicit white color
                     st.markdown(f"""
                     <div class="answer-box">
                         <h3 style="color: #00C853; margin: 0;">🤖 Answer:</h3>
@@ -302,3 +296,57 @@ if selected == "Student Chat":
                         <p style="font-size: 18px; line-height: 1.6; color: white;">{response['output_text']}</p>
                     </div>
                     """, unsafe_allow_html=True)
+                else:
+                    st.warning("⚠️ Knowledge Base Empty.")
+            except Exception as e:
+                st.error(f"Error: {e}")
+
+# ==========================================
+# PAGE 2: ADMIN PORTAL
+# ==========================================
+if selected == "Admin Portal":
+    c1, c2 = st.columns([1, 3])
+    with c1:
+        if lottie_upload: st_lottie(lottie_upload, height=150)
+    with c2:
+        st.title("Admin Upload")
+        st.write("Securely upload circulars.")
+
+    st.markdown('<div class="glass-card">', unsafe_allow_html=True)
+    pdf_docs = st.file_uploader("Select PDF Files", accept_multiple_files=True, type=['pdf'])
+    
+    st.write("")
+    if st.button("Process & Upload"):
+        if pdf_docs:
+            with st.status("Processing...", expanded=True):
+                text = ""
+                for pdf in pdf_docs:
+                    with pdfplumber.open(pdf) as pdf_file:
+                        for page in pdf_file.pages:
+                            t = page.extract_text()
+                            if t: text += t
+                    # Upload
+                    with open(pdf.name, "wb") as f: f.write(pdf.getbuffer())
+                    upload_to_drive(pdf.name, pdf.name)
+                    if os.path.exists(pdf.name): os.remove(pdf.name)
+                
+                # Train
+                text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
+                chunks = text_splitter.split_text(text)
+                get_vector_store(chunks)
+                st.success("Success!")
+                time.sleep(1)
+                st.rerun()
+    st.markdown('</div>', unsafe_allow_html=True)
+
+# ==========================================
+# PAGE 3: ABOUT
+# ==========================================
+if selected == "About":
+    st.title("About")
+    st.markdown("""
+    <div class="glass-card">
+        <h3>CampusMind AI</h3>
+        <p style="color:white;">Built for the 2024 Innovation Hackathon.</p>
+    </div>
+    """, unsafe_allow_html=True)
