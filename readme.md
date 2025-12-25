@@ -80,4 +80,6 @@ token_uri = "[https://oauth2.googleapis.com/token](https://oauth2.googleapis.com
 auth_provider_x509_cert_url = "[https://www.googleapis.com/oauth2/v1/certs](https://www.googleapis.com/oauth2/v1/certs)"
 client_x509_cert_url = "..."
 
-4. Run the AppBashstreamlit run app.py
+4. Run the App
+Bash
+streamlit run app.py
