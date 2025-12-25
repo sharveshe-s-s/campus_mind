@@ -83,24 +83,25 @@ if not get_global_memory().files:
 # --- GEMINI FUNCTIONS ---
 def transcribe_audio_gemini(audio_bytes):
     try:
-        # CHANGED: Use 'gemini-pro' for compatibility
-        model = genai.GenerativeModel("gemini-pro")
+        # NOTE: Older libraries might struggle with audio. 
+        # Returning a placeholder if it fails to prevent crashes.
+        model = genai.GenerativeModel("gemini-1.5-flash") 
         response = model.generate_content([
             "Transcribe this audio exactly.",
             {"mime_type": "audio/webm", "data": audio_bytes}
         ])
         return response.text
-    except Exception as e:
+    except:
         return ""
 
-# --- INDEX HANDLING (VERSION 6 - STABLE BATCH) ---
-INDEX_NAME = "faiss_index_v6"
+# --- INDEX HANDLING (VERSION 7 - FINAL STABLE) ---
+INDEX_NAME = "faiss_index_v7"
 
 def get_vector_store_batched(text_chunks):
-    # CHANGED: Use 'models/embedding-001' which is safer for older libs
+    # CHANGED: Using the safest embedding model
     embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
     
-    # BATCHING LOGIC TO PREVENT 429 ERRORS
+    # BATCHING TO PREVENT 429 ERRORS
     batch_size = 20
     total_chunks = len(text_chunks)
     progress_text = "Vectorizing document... Please wait."
@@ -108,11 +109,9 @@ def get_vector_store_batched(text_chunks):
     
     vector_store = None
     
-    # Process in batches
     for i in range(0, total_chunks, batch_size):
         batch = text_chunks[i : i + batch_size]
         
-        # Create or Add to Vector Store
         if vector_store is None:
             if os.path.exists(INDEX_NAME):
                 try:
@@ -125,12 +124,9 @@ def get_vector_store_batched(text_chunks):
         else:
             vector_store.add_texts(batch)
         
-        # Update Progress Bar
         percent_complete = min(1.0, (i + batch_size) / total_chunks)
         my_bar.progress(percent_complete, text=f"Vectorizing... {int(percent_complete*100)}%")
-        
-        # Wait to respect Rate Limits
-        time.sleep(2.0)
+        time.sleep(2.0) # Respect rate limits
         
     vector_store.save_local(INDEX_NAME)
     my_bar.empty()
@@ -142,7 +138,7 @@ def get_conversational_chain():
     Question: {question}
     Answer:
     """
-    # CHANGED: Use 'gemini-pro' - Guaranteed to work
+    # CHANGED: "gemini-pro" is guaranteed to work
     model = ChatGoogleGenerativeAI(model="gemini-pro", temperature=0.3)
     prompt = PromptTemplate(template=prompt_template, input_variables=["context", "question"])
     return load_qa_chain(model, chain_type="stuff", prompt=prompt)
@@ -192,7 +188,7 @@ if selected == "Student Chat":
     if user_question:
         with st.spinner("Thinking..."):
             try:
-                # Use 'embedding-001' to match the index
+                # MATCHING EMBEDDING MODEL
                 embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
                 if os.path.exists(INDEX_NAME):
                     new_db = FAISS.load_local(INDEX_NAME, embeddings, allow_dangerous_deserialization=True)
@@ -225,13 +221,13 @@ if selected == "Admin Portal":
                 # Update memory
                 get_global_memory().files = [{"name": p.name} for p in pdf_docs] + get_global_memory().files
                 
-                # Update Vector DB with BATCHING
+                # Update Vector DB
                 text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
                 chunks = text_splitter.split_text(raw_text)
                 
-                # CALL THE NEW BATCHED FUNCTION
+                # BATCHED UPLOAD
                 get_vector_store_batched(chunks)
                 
-                st.success("Knowledge Base Updated Successfully!")
+                st.success("Knowledge Base Updated!")
                 time.sleep(1)
                 st.rerun()
