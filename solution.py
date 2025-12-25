@@ -7,6 +7,7 @@ import pdfplumber
 import io
 import os
 import time
+from datetime import datetime
 
 # --- STANDARD IMPORTS ---
 from langchain.text_splitter import RecursiveCharacterTextSplitter
@@ -57,7 +58,7 @@ try:
 except FileNotFoundError: st.error("🚨 Secrets file not found!")
 
 # ==========================================
-# 2. HACKATHON WINNING CSS (RECTANGLE BUTTON EDITION)
+# 2. HACKATHON WINNING CSS (PRESERVED)
 # ==========================================
 st.markdown("""
 <style>
@@ -126,7 +127,7 @@ st.markdown("""
     
     .hero-badge {
         display: inline-flex; align-items: center; gap: 8px; padding: 8px 20px;
-        border-radius: 8px; /* Slightly rounded rectangle */
+        border-radius: 8px;
         background: rgba(0, 200, 83, 0.15);
         border: 1px solid rgba(0, 255, 140, 0.3); font-size: 13px; font-weight: 700;
         text-transform: uppercase; letter-spacing: 0.1em; color: #00ffc3;
@@ -164,17 +165,16 @@ st.markdown("""
     }
     div[data-testid="stButton"] button:hover { transform: translateY(-2px); }
 
-    /* --- RECTANGLE BUTTON FIX (ADMIN) --- */
+    /* RECTANGLE BUTTON FIX (ADMIN) */
     .stButton button {
         white-space: nowrap !important;
         width: auto !important;
         display: inline-flex !important;
         align-items: center !important;
         justify-content: center !important;
-        border-radius: 8px !important; /* Forces Rectangle Shape */
+        border-radius: 8px !important;
     }
     
-    /* PROCESS BUTTON SPECIFIC */
     .stButton button.process-btn {
         min-width: 300px !important;
         padding: 14px 40px !important; 
@@ -256,15 +256,36 @@ def upload_to_drive(file_path, file_name):
     except Exception as e: return f"Error: {e}"
 
 def get_recent_circulars():
+    """
+    Fetches circulars from Drive AND Session State (for instant update).
+    """
+    drive_files = []
+    # 1. Try Fetching from Drive
     try:
-        if "gcp_service_account" not in st.secrets: return []
-        key_dict = st.secrets["gcp_service_account"]
-        creds = service_account.Credentials.from_service_account_info(key_dict, scopes=['https://www.googleapis.com/auth/drive'])
-        service = build('drive', 'v3', credentials=creds)
-        query = f"'{DRIVE_FOLDER_ID}' in parents and trashed=false"
-        results = service.files().list(q=query, pageSize=3, fields="files(id, name, createdTime)", orderBy="createdTime desc", supportsAllDrives=True, includeItemsFromAllDrives=True).execute()
-        return results.get('files', [])
-    except: return []
+        if "gcp_service_account" in st.secrets:
+            key_dict = st.secrets["gcp_service_account"]
+            creds = service_account.Credentials.from_service_account_info(key_dict, scopes=['https://www.googleapis.com/auth/drive'])
+            service = build('drive', 'v3', credentials=creds)
+            query = f"'{DRIVE_FOLDER_ID}' in parents and trashed=false"
+            results = service.files().list(q=query, pageSize=3, fields="files(id, name, createdTime)", orderBy="createdTime desc", supportsAllDrives=True, includeItemsFromAllDrives=True).execute()
+            drive_files = results.get('files', [])
+    except: pass
+
+    # 2. Merge with Local Session State (Instant Updates)
+    local_files = st.session_state.get('local_circulars', [])
+    
+    # Combine (Local first, then Drive)
+    combined = local_files + drive_files
+    
+    # Deduplicate by name
+    seen_names = set()
+    unique_files = []
+    for f in combined:
+        if f['name'] not in seen_names:
+            unique_files.append(f)
+            seen_names.add(f['name'])
+            
+    return unique_files[:3]
 
 def get_vector_store(text_chunks):
     embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
@@ -284,9 +305,9 @@ def get_conversational_chain():
 
 lottie_admin = load_lottieurl("https://assets2.lottiefiles.com/packages/lf20_w51pcehl.json")
 
-# 3b. SESSION STATE
-if "chat_history" not in st.session_state:
-    st.session_state.chat_history = [] 
+# 3b. SESSION STATE INIT
+if "chat_history" not in st.session_state: st.session_state.chat_history = []
+if "local_circulars" not in st.session_state: st.session_state.local_circulars = [] # Fallback list
 
 # ==========================================
 # 4. SIDEBAR
@@ -327,7 +348,7 @@ if selected == "Student Chat":
 
     st.write("")
 
-    # --- RECENT UPDATES ---
+    # --- RECENT UPDATES (Now merges Session State for instant feedback) ---
     st.markdown("##### <span style='font-weight:700; color:#fff;'>Recent Circulars</span>", unsafe_allow_html=True)
     with st.spinner("Syncing latest updates..."):
         recent_files = get_recent_circulars()
@@ -440,7 +461,6 @@ if selected == "Student Chat":
 # ==========================================
 if selected == "Admin Portal":
     # --- FIX: HUGE COLUMN WIDTH FOR BUTTON ---
-    # Changing layout to [3, 7] to give button plenty of room
     c1, c2 = st.columns([3, 7]) 
     with c1:
         if lottie_admin: st_lottie(lottie_admin, height=180)
@@ -468,6 +488,10 @@ if selected == "Admin Portal":
                     upload_to_drive(pdf.name, pdf.name)
                     if os.path.exists(pdf.name): os.remove(pdf.name)
                 
+                # Update Session State (INSTANT FIX)
+                for pdf in pdf_docs:
+                    st.session_state.local_circulars.insert(0, {"name": pdf.name, "id": "local"})
+
                 text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
                 chunks = text_splitter.split_text(text)
                 get_vector_store(chunks)
