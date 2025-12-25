@@ -9,13 +9,9 @@ import os
 import time
 
 # --- GOOGLE GENAI IMPORTS ---
-# We use the specific classes to avoid version conflicts
 from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
 import google.generativeai as genai
-
-# Correct import for text splitter
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-
 from langchain_community.vectorstores import FAISS
 from langchain.chains.question_answering import load_qa_chain
 from langchain_core.prompts import PromptTemplate 
@@ -29,29 +25,6 @@ from googleapiclient.http import MediaFileUpload
 # 0. CONFIG & SECRETS
 # ==========================================
 st.set_page_config(page_title="CampusMind AI", page_icon="🎓", layout="wide")
-
-# Force Dark Mode
-def force_dark_mode():
-    config_dir = ".streamlit"
-    config_path = os.path.join(config_dir, "config.toml")
-    if not os.path.exists(config_dir): os.makedirs(config_dir)
-    config_content = """
-[theme]
-base = "dark"
-primaryColor = "#00C853"
-backgroundColor = "#050913"
-secondaryBackgroundColor = "#0b0f1f"
-textColor = "#f5f7fb"
-font = "sans serif"
-    """
-    if not os.path.exists(config_path):
-        with open(config_path, "w") as f: f.write(config_content)
-        st.rerun()
-
-# Only run once
-if "theme_set" not in st.session_state:
-    st.session_state.theme_set = True
-    force_dark_mode()
 
 # --- AUTH SETUP ---
 try:
@@ -110,6 +83,7 @@ if not get_global_memory().files:
 # --- GEMINI FUNCTIONS ---
 def transcribe_audio_gemini(audio_bytes):
     try:
+        # Using 1.5 Flash for audio
         model = genai.GenerativeModel("gemini-1.5-flash")
         response = model.generate_content([
             "Transcribe this audio exactly.",
@@ -118,11 +92,11 @@ def transcribe_audio_gemini(audio_bytes):
         return response.text
     except: return ""
 
-# --- THE FIX: NEW INDEX NAME 'v3' TO ERASE HISTORY ---
+# --- INDEX HANDLING ---
 INDEX_NAME = "faiss_index_v3"
 
 def get_vector_store(text_chunks):
-    # Use Google Embeddings
+    # Using specific model version for stability
     embeddings = GoogleGenerativeAIEmbeddings(model="models/text-embedding-004")
     
     if os.path.exists(INDEX_NAME):
@@ -130,6 +104,7 @@ def get_vector_store(text_chunks):
             vector_store = FAISS.load_local(INDEX_NAME, embeddings, allow_dangerous_deserialization=True)
             vector_store.add_texts(text_chunks) 
         except:
+            # If loading fails (e.g. corruption), start fresh
             vector_store = FAISS.from_texts(text_chunks, embedding=embeddings)
     else:
         vector_store = FAISS.from_texts(text_chunks, embedding=embeddings)
@@ -143,18 +118,17 @@ def get_conversational_chain():
     Question: {question}
     Answer:
     """
-    # Fallback to gemini-pro if flash fails, but flash should work with new requirements
-    model = ChatGoogleGenerativeAI(model="gemini-1.5-flash", temperature=0.3)
+    # Using 'gemini-1.5-flash-latest' to ensure we hit the valid endpoint
+    model = ChatGoogleGenerativeAI(model="gemini-1.5-flash-latest", temperature=0.3)
     prompt = PromptTemplate(template=prompt_template, input_variables=["context", "question"])
     return load_qa_chain(model, chain_type="stuff", prompt=prompt)
 
 # ==========================================
 # 2. UI SETUP
 # ==========================================
-# (Keep CSS strictly visual, omitted for brevity but paste your CSS block here if needed)
 st.markdown("""<style>
 .stApp { background-color: #050913; color: white; } 
-/* ... Insert your CSS here ... */
+.glass-card { background: rgba(255,255,255,0.05); padding: 20px; border-radius: 12px; margin-bottom: 15px; border: 1px solid rgba(255,255,255,0.1); }
 </style>""", unsafe_allow_html=True)
 
 lottie_admin = load_lottieurl("https://assets2.lottiefiles.com/packages/lf20_w51pcehl.json")
@@ -177,7 +151,8 @@ if selected == "Student Chat":
         st.write("📄 **Recent Circulars:**")
         cols = st.columns(3)
         for i, f in enumerate(memory.files[:3]):
-            cols[i].info(f['name'])
+            with cols[i]:
+                st.markdown(f"<div class='glass-card'>{f['name'][:30]}...</div>", unsafe_allow_html=True)
 
     # Input
     c1, c2 = st.columns([1, 8])
@@ -200,9 +175,9 @@ if selected == "Student Chat":
                     chain = get_conversational_chain()
                     res = chain.invoke({"input_documents": docs, "question": user_question}, return_only_outputs=True)
                     
-                    st.write(res['output_text'])
+                    st.success(res['output_text'])
                 else:
-                    st.warning("⚠️ No circulars uploaded yet!")
+                    st.warning("⚠️ No circulars uploaded yet! Go to Admin Portal.")
             except Exception as e:
                 st.error(f"Error: {e}")
 
@@ -229,4 +204,6 @@ if selected == "Admin Portal":
                 text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
                 chunks = text_splitter.split_text(raw_text)
                 get_vector_store(chunks)
-                st.success("Done!")
+                st.success("Knowledge Base Updated!")
+                time.sleep(1)
+                st.rerun()
