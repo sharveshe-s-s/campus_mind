@@ -8,21 +8,21 @@ import io
 import os
 import time
 
-# --- STANDARD IMPORTS ---
+# --- HYBRID IMPORTS ---
+# OpenAI for Brain & Vectors
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain_openai import OpenAIEmbeddings
+from langchain_openai import OpenAIEmbeddings, ChatOpenAI
 from langchain_community.vectorstores import FAISS
-from langchain_openai import ChatOpenAI
 from langchain.chains.question_answering import load_qa_chain
 from langchain_core.prompts import PromptTemplate 
 
-# Google Drive & Auth
+# Google for Audio (Gemini)
+import google.generativeai as genai
+
+# Google for Drive
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
-
-# Google Gemini (For Audio)
-import google.generativeai as genai
 
 # ==========================================
 # 0. THEME ENGINE (Force Dark Mode)
@@ -52,11 +52,12 @@ force_dark_mode()
 st.set_page_config(page_title="CampusMind AI", page_icon="🎓", layout="wide")
 
 try:
+    # 1. OpenAI Key (The Brain)
     if "OPENAI_API_KEY" in st.secrets: 
         os.environ["OPENAI_API_KEY"] = st.secrets["OPENAI_API_KEY"]
     
+    # 2. Google Key (The Ears)
     if "GOOGLE_API_KEY" in st.secrets:
-        # We set this for the genai library to pick up
         os.environ["GOOGLE_API_KEY"] = st.secrets["GOOGLE_API_KEY"]
         genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
 
@@ -64,7 +65,7 @@ try:
 except FileNotFoundError: st.error("🚨 Secrets file not found!")
 
 # ==========================================
-# 2. HACKATHON WINNING CSS (EXACT COPY)
+# 2. HACKATHON WINNING CSS (FINAL)
 # ==========================================
 st.markdown("""
 <style>
@@ -151,7 +152,7 @@ st.markdown("""
         color: #ffffff !important; box-shadow: 0 4px 15px rgba(0, 200, 83, 0.4);
     }
 
-    /* INPUTS (This is what fixes the white box issue) */
+    /* INPUTS */
     .stTextInput input {
         background: rgba(255, 255, 255, 0.05) !important; color: #fff !important;
         border-radius: 8px; padding: 16px 20px 16px 50px; font-size: 16px;
@@ -261,7 +262,7 @@ def upload_to_drive(file_path, file_name):
         return file.get('id')
     except Exception as e: return f"Error: {e}"
 
-# --- GLOBAL SHARED MEMORY FOR CIRCULARS ---
+# --- SHARED MEMORY ---
 class GlobalMemory:
     def __init__(self):
         self.files = []
@@ -272,7 +273,6 @@ def get_global_memory():
     return GlobalMemory()
 
 def update_global_files_from_drive():
-    """Fetches from drive and updates global memory."""
     memory = get_global_memory()
     try:
         if "gcp_service_account" in st.secrets:
@@ -283,17 +283,15 @@ def update_global_files_from_drive():
             results = service.files().list(q=query, pageSize=3, fields="files(id, name, createdTime)", orderBy="createdTime desc", supportsAllDrives=True, includeItemsFromAllDrives=True).execute()
             memory.files = results.get('files', [])
             memory.last_updated = time.time()
-    except:
-        pass
+    except: pass
 
-# Initialize memory on startup if empty
 if not get_global_memory().files:
     update_global_files_from_drive()
 
-# --- GEMINI AUDIO TRANSCRIPTION (THE ONLY CHANGE) ---
+# --- HYBRID AUDIO: GEMINI FLASH ---
 def transcribe_audio_gemini(audio_bytes):
     try:
-        # Uses Gemini 1.5 Flash (Free & Fast)
+        # Uses Google's Native Flash Model for Audio (Fast & Free)
         model = genai.GenerativeModel("gemini-1.5-flash")
         response = model.generate_content([
             "Transcribe this audio exactly. Output only the text.",
@@ -333,7 +331,6 @@ def get_conversational_chain():
 
 lottie_admin = load_lottieurl("https://assets2.lottiefiles.com/packages/lf20_w51pcehl.json")
 
-# 3b. SESSION STATE INIT
 if "chat_history" not in st.session_state: st.session_state.chat_history = []
 
 # ==========================================
@@ -376,7 +373,6 @@ if selected == "Student Chat":
 
     st.markdown("##### <span style='font-weight:700; color:#fff;'>Recent Circulars</span>", unsafe_allow_html=True)
     
-    # FETCH FROM SHARED GLOBAL MEMORY
     memory = get_global_memory()
     recent_files = memory.files
         
@@ -406,14 +402,14 @@ if selected == "Student Chat":
         with st.container():
             c_mic, c_input = st.columns([1, 8])
             with c_mic:
-                audio = mic_recorder(start_prompt="🎙️", stop_prompt="⏹️", key='recorder', format="webm", just_once=True)
+                # --- FIXED: REMOVED just_once=True TO PREVENT DEAD BUTTON ---
+                audio = mic_recorder(start_prompt="🎙️", stop_prompt="⏹️", key='recorder')
             with c_input:
                 voice_text = ""
                 if audio:
-                    # --- HYBRID CHANGE START ---
+                    # --- HYBRID SWAP: USING GEMINI FOR AUDIO ---
                     with st.spinner("Transcribing..."):
                         voice_text = transcribe_audio_gemini(audio['bytes'])
-                    # --- HYBRID CHANGE END ---
                         
                 default_val = voice_text if voice_text else ""
                 user_question = st.text_input("Search", value=default_val, placeholder="Ex: When are the exams? What does the latest circular say?", label_visibility="collapsed")
@@ -505,18 +501,19 @@ if selected == "Admin Portal":
                 for pdf in pdf_docs:
                     with pdfplumber.open(pdf) as pdf_file:
                         for page in pdf_file.pages:
+                            # Standard extract for better flow
                             t = page.extract_text()
                             if t: text += t
                     with open(pdf.name, "wb") as f: f.write(pdf.getbuffer())
                     upload_to_drive(pdf.name, pdf.name)
                     if os.path.exists(pdf.name): os.remove(pdf.name)
                 
-                # UPDATE MEMORY
+                # Update Memory
                 memory = get_global_memory()
                 for pdf in pdf_docs:
                     memory.files.insert(0, {"name": pdf.name, "id": "local_upload"})
                 
-                # BIG CHUNK SIZE (3000) TO FIX TABLE READING
+                # CHUNK SIZE 3000 (To fix the table issue)
                 text_splitter = RecursiveCharacterTextSplitter(chunk_size=3000, chunk_overlap=200)
                 chunks = text_splitter.split_text(text)
                 get_vector_store(chunks)
@@ -528,6 +525,7 @@ if selected == "Admin Portal":
             st.warning("Please select at least one PDF file.")
     st.markdown('</div>', unsafe_allow_html=True)
 
+    # Button CSS Injection
     st.markdown("""
     <script>
         const buttons = window.parent.document.querySelectorAll('button');
