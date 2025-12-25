@@ -83,9 +83,7 @@ if not get_global_memory().files:
 # --- GEMINI FUNCTIONS ---
 def transcribe_audio_gemini(audio_bytes):
     try:
-        # NOTE: Older libraries might struggle with audio. 
-        # Returning a placeholder if it fails to prevent crashes.
-        model = genai.GenerativeModel("gemini-1.5-flash") 
+        model = genai.GenerativeModel("gemini-1.5-flash")
         response = model.generate_content([
             "Transcribe this audio exactly.",
             {"mime_type": "audio/webm", "data": audio_bytes}
@@ -94,41 +92,63 @@ def transcribe_audio_gemini(audio_bytes):
     except:
         return ""
 
-# --- INDEX HANDLING (VERSION 7 - FINAL STABLE) ---
-INDEX_NAME = "faiss_index_v7"
+# --- INDEX HANDLING (VERSION 8 - INVINCIBLE) ---
+INDEX_NAME = "faiss_index_v8"
 
 def get_vector_store_batched(text_chunks):
-    # CHANGED: Using the safest embedding model
-    embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
+    # Using 'models/text-embedding-004' (Newer, usually better limits)
+    embeddings = GoogleGenerativeAIEmbeddings(model="models/text-embedding-004")
     
-    # BATCHING TO PREVENT 429 ERRORS
-    batch_size = 20
+    # TINY BATCH SIZE TO SURVIVE FREE TIER
+    batch_size = 5 
     total_chunks = len(text_chunks)
-    progress_text = "Vectorizing document... Please wait."
+    progress_text = "Vectorizing... (Auto-throttling enabled)"
     my_bar = st.progress(0, text=progress_text)
     
     vector_store = None
     
+    # Function to add batch with retry logic
+    def add_batch_with_retry(store, batch_texts):
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                if store is None:
+                    if os.path.exists(INDEX_NAME):
+                        try:
+                            store = FAISS.load_local(INDEX_NAME, embeddings, allow_dangerous_deserialization=True)
+                            store.add_texts(batch_texts)
+                        except:
+                            store = FAISS.from_texts(batch_texts, embedding=embeddings)
+                    else:
+                        store = FAISS.from_texts(batch_texts, embedding=embeddings)
+                else:
+                    store.add_texts(batch_texts)
+                return store # Success
+            except Exception as e:
+                error_str = str(e).lower()
+                if "429" in error_str or "quota" in error_str:
+                    st.warning(f"Rate limit hit. Cooling down for 65 seconds... (Attempt {attempt+1}/{max_retries})")
+                    time.sleep(65) # Wait out the minute limit
+                    continue
+                else:
+                    raise e # Real error, don't retry
+        return store
+
+    # Process all chunks
     for i in range(0, total_chunks, batch_size):
         batch = text_chunks[i : i + batch_size]
         
-        if vector_store is None:
-            if os.path.exists(INDEX_NAME):
-                try:
-                    vector_store = FAISS.load_local(INDEX_NAME, embeddings, allow_dangerous_deserialization=True)
-                    vector_store.add_texts(batch)
-                except:
-                    vector_store = FAISS.from_texts(batch, embedding=embeddings)
-            else:
-                vector_store = FAISS.from_texts(batch, embedding=embeddings)
-        else:
-            vector_store.add_texts(batch)
+        vector_store = add_batch_with_retry(vector_store, batch)
         
+        # Update UI
         percent_complete = min(1.0, (i + batch_size) / total_chunks)
-        my_bar.progress(percent_complete, text=f"Vectorizing... {int(percent_complete*100)}%")
-        time.sleep(2.0) # Respect rate limits
+        my_bar.progress(percent_complete, text=f"Processing... {int(percent_complete*100)}%")
         
-    vector_store.save_local(INDEX_NAME)
+        # Standard safety sleep
+        time.sleep(1.0)
+        
+    if vector_store:
+        vector_store.save_local(INDEX_NAME)
     my_bar.empty()
 
 def get_conversational_chain():
@@ -138,7 +158,7 @@ def get_conversational_chain():
     Question: {question}
     Answer:
     """
-    # CHANGED: "gemini-pro" is guaranteed to work
+    # gemini-pro is the safest choice for RAG
     model = ChatGoogleGenerativeAI(model="gemini-pro", temperature=0.3)
     prompt = PromptTemplate(template=prompt_template, input_variables=["context", "question"])
     return load_qa_chain(model, chain_type="stuff", prompt=prompt)
@@ -165,7 +185,6 @@ with st.sidebar:
 if selected == "Student Chat":
     st.title("CampusMind AI")
     
-    # Recent Circulars
     memory = get_global_memory()
     if memory.files:
         st.write("📄 **Recent Circulars:**")
@@ -174,7 +193,6 @@ if selected == "Student Chat":
             with cols[i]:
                 st.markdown(f"<div class='glass-card'>{f['name'][:30]}...</div>", unsafe_allow_html=True)
 
-    # Input
     c1, c2 = st.columns([1, 8])
     with c1:
         audio = mic_recorder(start_prompt="🎙️", stop_prompt="⏹️", key='recorder')
@@ -188,14 +206,12 @@ if selected == "Student Chat":
     if user_question:
         with st.spinner("Thinking..."):
             try:
-                # MATCHING EMBEDDING MODEL
-                embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
+                embeddings = GoogleGenerativeAIEmbeddings(model="models/text-embedding-004")
                 if os.path.exists(INDEX_NAME):
                     new_db = FAISS.load_local(INDEX_NAME, embeddings, allow_dangerous_deserialization=True)
                     docs = new_db.similarity_search(user_question)
                     chain = get_conversational_chain()
                     res = chain.invoke({"input_documents": docs, "question": user_question}, return_only_outputs=True)
-                    
                     st.success(res['output_text'])
                 else:
                     st.warning("⚠️ No circulars uploaded yet! Go to Admin Portal.")
@@ -211,23 +227,21 @@ if selected == "Admin Portal":
     
     if st.button("Upload"):
         if pdf_docs:
-            with st.spinner("Processing..."):
+            with st.spinner("Starting processing..."):
                 raw_text = ""
                 for pdf in pdf_docs:
                     with pdfplumber.open(pdf) as f:
                         for page in f.pages: raw_text += page.extract_text()
                     upload_to_drive(pdf.name, pdf.name)
                 
-                # Update memory
                 get_global_memory().files = [{"name": p.name} for p in pdf_docs] + get_global_memory().files
                 
-                # Update Vector DB
                 text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
                 chunks = text_splitter.split_text(raw_text)
                 
-                # BATCHED UPLOAD
+                # CALL THE NEW INVINCIBLE FUNCTION
                 get_vector_store_batched(chunks)
                 
-                st.success("Knowledge Base Updated!")
+                st.success("Knowledge Base Updated Successfully!")
                 time.sleep(1)
                 st.rerun()
