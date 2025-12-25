@@ -21,14 +21,15 @@ from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
 
-# OpenAI Client (Still needed for Text Embeddings/Chat)
+# OpenAI Client
 from openai import OpenAI
 
 # --- NEW: Google Gemini for Audio ---
 import google.generativeai as genai
+from google.generativeai.types import HarmCategory, HarmBlockThreshold
 
 # ==========================================
-# 0. THEME ENGINE (Force Dark Mode)
+# 0. THEME ENGINE
 # ==========================================
 def force_dark_mode():
     config_dir = ".streamlit"
@@ -58,7 +59,6 @@ try:
     if "OPENAI_API_KEY" in st.secrets: 
         os.environ["OPENAI_API_KEY"] = st.secrets["OPENAI_API_KEY"]
     
-    # --- NEW: Google Key for Audio ---
     if "GOOGLE_API_KEY" in st.secrets:
         os.environ["GOOGLE_API_KEY"] = st.secrets["GOOGLE_API_KEY"]
         genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
@@ -67,7 +67,7 @@ try:
 except FileNotFoundError: st.error("🚨 Secrets file not found!")
 
 # ==========================================
-# 2. HACKATHON WINNING CSS (FINAL)
+# 2. HACKATHON WINNING CSS
 # ==========================================
 st.markdown("""
 <style>
@@ -77,12 +77,10 @@ st.markdown("""
         font-family: 'Inter', sans-serif;
     }
 
-    /* SCROLLBAR */
     ::-webkit-scrollbar { width: 10px; }
     ::-webkit-scrollbar-track { background: #050913; }
     ::-webkit-scrollbar-thumb { background: #00C853; border-radius: 10px; }
 
-    /* LAYOUT & ANIMATION */
     .block-container {
         padding-top: 2rem !important;
         padding-bottom: 3rem !important;
@@ -100,7 +98,6 @@ st.markdown("""
     }
     [data-testid="stMain"] { background: transparent !important; }
 
-    /* SIDEBAR */
     section[data-testid="stSidebar"] {
         background: rgba(5, 9, 19, 0.95);
         border-right: 1px solid rgba(255, 255, 255, 0.05);
@@ -109,26 +106,17 @@ st.markdown("""
     .sidebar-title { font-weight: 800; font-size: 24px; color: #fff; letter-spacing: 0.05em; }
     .sidebar-subtitle { font-size: 12px; color: rgba(255,255,255,0.6); letter-spacing: 0.1em; text-transform: uppercase; }
 
-    /* CENTERED HERO TITLE */
     .hero-container {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        text-align: center;
-        padding: 50px 0 40px 0;
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        text-align: center; padding: 50px 0 40px 0;
     }
     .shimmer-text {
-        font-weight: 800;
-        font-size: 64px;
+        font-weight: 800; font-size: 64px;
         background: linear-gradient(120deg, #ffffff 30%, #00ffc3 50%, #00C853 70%);
         background-size: 200% auto;
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        animation: shine 6s linear infinite;
-        text-shadow: 0 0 30px rgba(0, 200, 83, 0.2);
-        margin: 15px 0;
-        line-height: 1.1;
+        -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        animation: shine 6s linear infinite; text-shadow: 0 0 30px rgba(0, 200, 83, 0.2);
+        margin: 15px 0; line-height: 1.1;
     }
     @keyframes shine { to { background-position: 200% center; } }
 
@@ -136,13 +124,11 @@ st.markdown("""
     
     .hero-badge {
         display: inline-flex; align-items: center; gap: 8px; padding: 8px 20px;
-        border-radius: 8px;
-        background: rgba(0, 200, 83, 0.15);
+        border-radius: 8px; background: rgba(0, 200, 83, 0.15);
         border: 1px solid rgba(0, 255, 140, 0.3); font-size: 13px; font-weight: 700;
         text-transform: uppercase; letter-spacing: 0.1em; color: #00ffc3;
     }
 
-    /* NAVIGATION PILLS */
     .nav-link {
         border-radius: 6px !important; margin: 4px 0 !important;
         font-size: 15px !important; font-weight: 500 !important; color: #c0c7df !important;
@@ -154,7 +140,6 @@ st.markdown("""
         color: #ffffff !important; box-shadow: 0 4px 15px rgba(0, 200, 83, 0.4);
     }
 
-    /* INPUTS */
     .stTextInput input {
         background: rgba(255, 255, 255, 0.05) !important; color: #fff !important;
         border-radius: 8px; padding: 16px 20px 16px 50px; font-size: 16px;
@@ -165,7 +150,6 @@ st.markdown("""
         box-shadow: 0 0 0 3px rgba(0, 200, 83, 0.25);
     }
 
-    /* MIC BUTTON */
     div[data-testid="stButton"] button {
         border-radius: 8px !important; width: 54px; height: 54px;
         background: linear-gradient(135deg, #00C853, #009624);
@@ -174,55 +158,32 @@ st.markdown("""
     }
     div[data-testid="stButton"] button:hover { transform: translateY(-2px); }
 
-    /* RECTANGLE BUTTON FIX (ADMIN) */
-    .stButton button {
-        white-space: nowrap !important;
-        width: auto !important;
-        display: inline-flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-        border-radius: 8px !important;
-    }
-    
+    .stButton button { white-space: nowrap !important; width: auto !important; display: inline-flex !important; align-items: center !important; justify-content: center !important; border-radius: 8px !important; }
     .stButton button.process-btn {
-        min-width: 300px !important;
-        padding: 14px 40px !important; 
-        font-size: 16px; font-weight: 700;
-        background: linear-gradient(135deg, #00C853, #00e676); color: white;
-        border: none;
-        box-shadow: 0 8px 25px rgba(0, 200, 83, 0.3);
+        min-width: 300px !important; padding: 14px 40px !important; 
+        font-size: 16px; font-weight: 700; background: linear-gradient(135deg, #00C853, #00e676); color: white;
+        border: none; box-shadow: 0 8px 25px rgba(0, 200, 83, 0.3);
     }
     .stButton button.process-btn:hover { transform: translateY(-3px); box-shadow: 0 12px 30px rgba(0, 200, 83, 0.4); }
 
-    /* GLASS CARDS */
     .glass-card {
         background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(25px);
         border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.08); padding: 24px;
-        transition: transform 0.2s ease;
-        color: #ffffff !important; 
+        transition: transform 0.2s ease; color: #ffffff !important; 
     }
     .glass-card:hover { transform: translateY(-5px); border-color: rgba(0, 200, 83, 0.4); }
 
-    /* ANSWER BOX */
     .answer-box-container {
-        background: rgba(0, 200, 83, 0.04);
-        border-radius: 12px;
-        border: 2px solid #00C853; 
-        padding: 24px;
-        margin-top: 30px;
-        color: #ffffff !important;
-        box-shadow: 0 0 50px rgba(0, 200, 83, 0.1);
-        position: relative;
-        word-wrap: break-word;
+        background: rgba(0, 200, 83, 0.04); border-radius: 12px; border: 2px solid #00C853; 
+        padding: 24px; margin-top: 30px; color: #ffffff !important;
+        box-shadow: 0 0 50px rgba(0, 200, 83, 0.1); position: relative; word-wrap: break-word;
     }
     .answer-title { color: #00ffc3; font-size: 20px; font-weight: 800; display: flex; align-items: center; gap: 12px; }
     .answer-content { font-size: 17px; line-height: 1.7; margin-top: 15px; color: #eef2f6; }
 
-    /* HISTORY */
     .history-card {
         background: rgba(255, 255, 255, 0.02); border-radius: 12px;
-        border: 1px solid rgba(255, 255, 255, 0.08); padding: 16px;
-        max-height: 350px; overflow-y: auto;
+        border: 1px solid rgba(255, 255, 255, 0.08); padding: 16px; max-height: 350px; overflow-y: auto;
     }
     .history-item {
         padding: 12px 16px; background: rgba(255, 255, 255, 0.04);
@@ -264,7 +225,6 @@ def upload_to_drive(file_path, file_name):
         return file.get('id')
     except Exception as e: return f"Error: {e}"
 
-# --- GLOBAL SHARED MEMORY FOR CIRCULARS ---
 class GlobalMemory:
     def __init__(self):
         self.files = []
@@ -275,7 +235,6 @@ def get_global_memory():
     return GlobalMemory()
 
 def update_global_files_from_drive():
-    """Fetches from drive and updates global memory."""
     memory = get_global_memory()
     try:
         if "gcp_service_account" in st.secrets:
@@ -286,27 +245,36 @@ def update_global_files_from_drive():
             results = service.files().list(q=query, pageSize=3, fields="files(id, name, createdTime)", orderBy="createdTime desc", supportsAllDrives=True, includeItemsFromAllDrives=True).execute()
             memory.files = results.get('files', [])
             memory.last_updated = time.time()
-    except:
-        pass
+    except: pass
 
-# Initialize memory on startup if empty
 if not get_global_memory().files:
     update_global_files_from_drive()
 
-# --- NEW: GEMINI TRANSCRIPTION FUNCTION ---
+# --- HYBRID AUDIO: GEMINI FLASH (ROBUST) ---
 def transcribe_audio_gemini(audio_bytes):
     try:
-        # Uses Google's Native Flash Model for Audio (Fast & Free)
         model = genai.GenerativeModel("gemini-1.5-flash")
-        response = model.generate_content([
-            "Transcribe this audio exactly. Output only the text.",
-            {"mime_type": "audio/webm", "data": audio_bytes}
-        ])
+        
+        # Disable safety settings to prevent random blocks on audio
+        safety_settings = {
+            HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
+            HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE,
+            HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_NONE,
+            HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
+        }
+
+        response = model.generate_content(
+            [
+                "Transcribe this audio exactly. Output only the English text.",
+                {"mime_type": "audio/webm", "data": audio_bytes}
+            ],
+            safety_settings=safety_settings
+        )
         return response.text
-    except Exception as e:
+    except:
         return ""
 
-# --- INTELLIGENT MEMORY MERGING (OpenAI Embeddings) ---
+# --- OPENAI INTELLIGENCE ---
 def get_vector_store(text_chunks):
     embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
     if os.path.exists("faiss_index"):
@@ -325,9 +293,18 @@ def get_vector_store(text_chunks):
 
 def get_conversational_chain():
     prompt_template = """
-    Answer the question based ONLY on the provided Context.
-    Context: {context}
+    You are an intelligent campus assistant. 
+    Review the Context below carefully. It contains extracted text from PDF circulars.
+    
+    IMPORTANT:
+    1. Look for Fee Tables (rows connecting 'Event' to 'Fee/Amount').
+    2. Look for Deadlines (rows connecting 'Event' to 'Date').
+    
+    Context:
+    {context}
+    
     Question: {question}
+    
     Answer:
     """
     model = ChatOpenAI(model="gpt-4o-mini", temperature=0.3)
@@ -336,8 +313,23 @@ def get_conversational_chain():
 
 lottie_admin = load_lottieurl("https://assets2.lottiefiles.com/packages/lf20_w51pcehl.json")
 
-# 3b. SESSION STATE INIT
+# --- SESSION STATE & CALLBACKS ---
 if "chat_history" not in st.session_state: st.session_state.chat_history = []
+if "user_query" not in st.session_state: st.session_state.user_query = ""
+
+# THE FIX: Direct Session State Access Callback
+def audio_callback():
+    # 'recorder' is the key used in mic_recorder
+    if st.session_state.recorder:
+        audio_bytes = st.session_state.recorder['bytes']
+        try:
+            # Show a small toast notification that we are working
+            st.toast("🎙️ Processing Audio with Gemini...", icon="⚡")
+            text = transcribe_audio_gemini(audio_bytes)
+            if text:
+                st.session_state.user_query = text
+        except:
+            pass
 
 # ==========================================
 # 4. SIDEBAR
@@ -379,7 +371,6 @@ if selected == "Student Chat":
 
     st.markdown("##### <span style='font-weight:700; color:#fff;'>Recent Circulars</span>", unsafe_allow_html=True)
     
-    # FETCH FROM SHARED GLOBAL MEMORY
     memory = get_global_memory()
     recent_files = memory.files
         
@@ -409,17 +400,25 @@ if selected == "Student Chat":
         with st.container():
             c_mic, c_input = st.columns([1, 8])
             with c_mic:
-                # --- AUDIO FIX: REMOVED just_once=True to prevent dead button ---
-                audio = mic_recorder(start_prompt="🎙️", stop_prompt="⏹️", key='recorder')
+                # --- ROBUST CALLBACK CONFIG ---
+                mic_recorder(
+                    start_prompt="🎙️", 
+                    stop_prompt="⏹️", 
+                    key='recorder',
+                    format="webm",
+                    on_recorder_factory=audio_callback # The secret weapon for reliability
+                )
             with c_input:
-                voice_text = ""
-                if audio:
-                    # --- HYBRID SWAP: USING GEMINI FOR AUDIO ---
-                    with st.spinner("Transcribing..."):
-                        voice_text = transcribe_audio_gemini(audio['bytes'])
-                        
-                default_val = voice_text if voice_text else ""
-                user_question = st.text_input("Search", value=default_val, placeholder="Ex: When are the exams? What does the latest circular say?", label_visibility="collapsed")
+                user_question = st.text_input(
+                    "Search", 
+                    value=st.session_state.user_query, 
+                    placeholder="Ex: When are the exams? What does the latest circular say?", 
+                    label_visibility="collapsed",
+                    key="search_box"
+                )
+                
+                if user_question != st.session_state.user_query:
+                    st.session_state.user_query = user_question
 
     with right_col:
         st.markdown("<div class='history-card'>", unsafe_allow_html=True)
@@ -438,9 +437,8 @@ if selected == "Student Chat":
                 embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
                 if os.path.exists("faiss_index"):
                     new_db = FAISS.load_local("faiss_index", embeddings, allow_dangerous_deserialization=True)
-                    docs = new_db.similarity_search(user_question)
+                    docs = new_db.similarity_search(user_question, k=12)
                     chain = get_conversational_chain()
-                    
                     res = chain.invoke({"input_documents": docs, "question": user_question}, return_only_outputs=True)
                     full_response = res['output_text']
                     
@@ -475,7 +473,6 @@ if selected == "Student Chat":
                         <div class="answer-content">{full_response}</div>
                     </div>
                     """, unsafe_allow_html=True)
-                    
                 else:
                     st.warning("⚠️ Knowledge base empty. Please upload circulars in the Admin Portal.")
             except Exception as e:
@@ -511,14 +508,11 @@ if selected == "Admin Portal":
                     upload_to_drive(pdf.name, pdf.name)
                     if os.path.exists(pdf.name): os.remove(pdf.name)
                 
-                # --- UPDATE GLOBAL SHARED MEMORY INSTANTLY ---
                 memory = get_global_memory()
                 for pdf in pdf_docs:
-                    # Insert at the beginning so it's "Recent"
                     memory.files.insert(0, {"name": pdf.name, "id": "local_upload"})
                 
-                # --- CHUNK SIZE 3000 (Added to catch tables) ---
-                text_splitter = RecursiveCharacterTextSplitter(chunk_size=3000, chunk_overlap=100)
+                text_splitter = RecursiveCharacterTextSplitter(chunk_size=3000, chunk_overlap=200)
                 chunks = text_splitter.split_text(text)
                 get_vector_store(chunks)
                 
@@ -554,6 +548,7 @@ if selected == "About":
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
             <div class="chip">💻 Streamlit Frontend</div>
             <div class="chip">🧠 OpenAI GPT‑4o</div>
+            <div class="chip">🎤 Google Gemini Audio</div>
             <div class="chip">🔍 FAISS Vector DB</div>
             <div class="chip">☁️ Google Drive API</div>
         </div>
