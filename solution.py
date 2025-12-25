@@ -57,7 +57,7 @@ try:
 except FileNotFoundError: st.error("🚨 Secrets file not found!")
 
 # ==========================================
-# 2. HACKATHON WINNING CSS (FINAL)
+# 2. HACKATHON WINNING CSS (FINAL POLISH)
 # ==========================================
 st.markdown("""
 <style>
@@ -67,12 +67,13 @@ st.markdown("""
         font-family: 'Inter', sans-serif;
     }
 
-    /* SCROLLBAR */
-    ::-webkit-scrollbar { width: 8px; }
+    /* CUSTOM SCROLLBAR */
+    ::-webkit-scrollbar { width: 10px; }
     ::-webkit-scrollbar-track { background: #050913; }
     ::-webkit-scrollbar-thumb { background: #00C853; border-radius: 10px; }
+    ::-webkit-scrollbar-thumb:hover { background: #00e676; }
 
-    /* LAYOUT */
+    /* GLOBAL LAYOUT */
     .block-container {
         padding-top: 2rem !important;
         padding-bottom: 3rem !important;
@@ -84,6 +85,7 @@ st.markdown("""
         to { opacity: 1; transform: translateY(0); }
     }
 
+    /* APP BACKGROUND */
     .stApp {
         background: radial-gradient(circle at top left, #1a2a4f 0, #050913 40%, #000000 100%);
         color: #f5f7fb !important;
@@ -92,11 +94,11 @@ st.markdown("""
 
     /* SIDEBAR */
     section[data-testid="stSidebar"] {
-        background: rgba(5, 9, 19, 0.9);
+        background: rgba(5, 9, 19, 0.85);
         border-right: 1px solid rgba(255, 255, 255, 0.05);
         backdrop-filter: blur(20px);
     }
-    .sidebar-title { font-weight: 800; font-size: 24px; color: #fff; }
+    .sidebar-title { font-weight: 800; font-size: 24px; letter-spacing: 0.05em; color: #fff; }
     .sidebar-subtitle { font-size: 12px; color: rgba(255,255,255,0.6); letter-spacing: 0.1em; text-transform: uppercase; }
 
     /* SHIMMER TEXT */
@@ -107,6 +109,7 @@ st.markdown("""
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         animation: shine 5s linear infinite;
+        text-shadow: 0 0 20px rgba(0, 200, 83, 0.3);
     }
     @keyframes shine { to { background-position: 200% center; } }
 
@@ -118,39 +121,44 @@ st.markdown("""
         text-transform: uppercase; letter-spacing: 0.1em; color: #00ffc3; margin-bottom: 12px;
     }
 
-    /* NAVIGATION */
+    /* NAVIGATION PILLS */
     .nav-link {
-        border-radius: 8px !important; margin: 4px 0 !important;
+        border-radius: 8px !important; margin: 4px 0 !important; padding: 0.6rem 1rem !important;
         font-size: 15px !important; font-weight: 500 !important; color: #c0c7df !important;
         transition: all 0.2s ease-out !important;
     }
-    .nav-link:hover { background: rgba(255, 255, 255, 0.05) !important; color: #fff !important; }
+    .nav-link:hover {
+        background: rgba(255, 255, 255, 0.05) !important; color: #fff !important;
+    }
     .nav-link-selected {
         background: linear-gradient(135deg, #00C853, #009624) !important;
         color: #ffffff !important; box-shadow: 0 4px 12px rgba(0, 200, 83, 0.3);
     }
 
-    /* INPUTS */
+    /* SEARCH BAR */
     .stTextInput input {
         background: rgba(255, 255, 255, 0.05) !important; color: #fff !important;
         border-radius: 12px; padding: 14px 18px 14px 50px; font-size: 16px;
-        border: 1px solid rgba(255, 255, 255, 0.1); transition: all 0.2s ease;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        transition: all 0.2s ease;
     }
     .stTextInput input:focus {
         border-color: #00C853 !important; background: rgba(0, 200, 83, 0.05) !important;
         box-shadow: 0 0 0 3px rgba(0, 200, 83, 0.2);
     }
 
-    /* BUTTONS */
+    /* MIC BUTTON */
     div[data-testid="stButton"] button {
         border-radius: 12px !important; width: 50px; height: 50px;
         background: linear-gradient(135deg, #00C853, #009624);
         border: none; color: #fff; font-size: 24px;
-        box-shadow: 0 4px 12px rgba(0, 200, 83, 0.3);
+        transition: all 0.2s ease; box-shadow: 0 4px 12px rgba(0, 200, 83, 0.3);
     }
-    div[data-testid="stButton"] button:hover { transform: translateY(-2px); }
+    div[data-testid="stButton"] button:hover {
+        transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0, 200, 83, 0.4);
+    }
 
-    /* PROCESS BUTTON & ALIGNMENT FIX */
+    /* --- BULLETPROOF BUTTON FIX --- */
     .stButton button {
         white-space: nowrap !important;
         width: auto !important;
@@ -158,37 +166,41 @@ st.markdown("""
         align-items: center !important;
         justify-content: center !important;
     }
+
+    /* PROCESS BUTTON */
     .stButton button.process-btn {
         border-radius: 12px !important; min-width: 220px !important;
-        padding: 14px 36px !important; font-size: 16px; font-weight: 700;
-        background: linear-gradient(135deg, #00C853, #00e676); color: white;
-        box-shadow: 0 8px 20px rgba(0, 200, 83, 0.3);
+        padding: 14px 36px !important; font-size: 16px; font-weight: 700; letter-spacing: 0.05em;
+        background: linear-gradient(135deg, #00C853, #00e676); color: white; border: none;
+        box-shadow: 0 8px 20px rgba(0, 200, 83, 0.3); transition: all 0.2s ease;
     }
-    .stButton button.process-btn:hover { transform: translateY(-3px); }
+    .stButton button.process-btn:hover {
+        transform: translateY(-3px); box-shadow: 0 12px 28px rgba(0, 200, 83, 0.4);
+    }
 
-    /* CARDS */
+    /* GLASS CARDS */
     .glass-card {
-        background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(20px);
-        border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.08); padding: 24px;
-        transition: transform 0.2s ease;
+        background: rgba(255, 255, 255, 0.03);
+        backdrop-filter: blur(20px); border-radius: 16px;
+        border: 1px solid rgba(255, 255, 255, 0.08); padding: 24px; margin-bottom: 20px;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
     }
-    .glass-card:hover { transform: translateY(-5px); border-color: rgba(0, 200, 83, 0.3); }
+    .glass-card:hover {
+        transform: translateY(-5px); box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5);
+        border-color: rgba(0, 200, 83, 0.3);
+    }
 
-    /* ANSWER BOX CSS */
+    /* ANSWER BOX */
     .answer-box-container {
-        background: rgba(0, 200, 83, 0.06);
-        border-radius: 16px;
-        border: 2px solid #00C853; /* The Green Border */
-        padding: 24px;
-        margin-top: 30px;
-        color: #ffffff !important;
-        box-shadow: 0 0 40px rgba(0, 200, 83, 0.1);
-        position: relative;
+        background: rgba(0, 200, 83, 0.05);
+        border-radius: 16px; border: 2px solid #00C853;
+        padding: 24px; margin-top: 30px; color: #ffffff !important;
+        box-shadow: 0 12px 36px rgba(0, 200, 83, 0.15);
     }
     .answer-title { color: #00ffc3; font-size: 20px; font-weight: 800; display: flex; align-items: center; gap: 10px; }
-    .answer-content { font-size: 16px; line-height: 1.6; margin-top: 15px; color: #e0e6ed; }
+    .answer-sub { font-size: 13px; color: rgba(255,255,255,0.7); margin-top: 4px; }
 
-    /* HISTORY */
+    /* CHAT HISTORY */
     .history-card {
         background: rgba(255, 255, 255, 0.03); border-radius: 16px;
         border: 1px solid rgba(255, 255, 255, 0.08); padding: 16px;
@@ -198,12 +210,14 @@ st.markdown("""
         padding: 10px 14px; background: rgba(255, 255, 255, 0.05);
         border-radius: 10px; margin-bottom: 10px; font-size: 14px;
     }
+    .history-item .label { font-weight: 700; font-size: 12px; color: #00ffc3; text-transform: uppercase; }
     
     .chip {
         display: inline-flex; align-items: center; padding: 6px 12px; border-radius: 999px;
         border: 1px solid rgba(255,255,255,0.1); font-size: 13px; color: #fff;
-        gap: 8px; background: rgba(255,255,255,0.05);
+        gap: 8px; background: rgba(255,255,255,0.05); font-weight: 500;
     }
+
     #MainMenu {visibility: hidden;} footer {visibility: hidden;}
 </style>
 """, unsafe_allow_html=True)
@@ -216,6 +230,11 @@ def load_lottieurl(url):
         r = requests.get(url, timeout=3)
         return r.json() if r.status_code == 200 else None
     except: return None
+
+def stream_text(text):
+    for word in text.split(" "):
+        yield word + " "
+        time.sleep(0.04)
 
 def upload_to_drive(file_path, file_name):
     try:
@@ -257,11 +276,8 @@ def get_conversational_chain():
     return load_qa_chain(model, chain_type="stuff", prompt=prompt)
 
 # --- ASSETS ---
-# 1. Primary Lottie Animation (Robot)
+# ✅ FIX: New, Reliable Futuristic AI Lottie Animation
 lottie_student_ai = load_lottieurl("https://lottie.host/60064060-2763-4393-8767-815716067708/3b336163-7407-4603-8003-160071663768.json")
-# 2. Fallback Static Image (Futuristic AI) - Used if Lottie fails
-fallback_image = "https://img.freepik.com/premium-photo/futuristic-robot-artificial-intelligence-concept_31965-3856.jpg"
-
 lottie_admin = load_lottieurl("https://assets2.lottiefiles.com/packages/lf20_w51pcehl.json")
 
 # 3b. SESSION STATE
@@ -296,15 +312,10 @@ with st.sidebar:
 # ==========================================
 if selected == "Student Chat":
     
-    # --- HERO SECTION ---
     col1, col2 = st.columns([1, 2])
     with col1:
-        # LOGIC: Try Lottie, if None, show Image
         if lottie_student_ai:
             st_lottie(lottie_student_ai, height=240, key="hero_anim")
-        else:
-            st.image(fallback_image, width=240) # Fallback guarantees an image
-            
     with col2:
         st.markdown("<div style='display:flex;flex-direction:column;justify-content:center;height:240px;'>", unsafe_allow_html=True)
         st.markdown("<div class='hero-badge'>⚡ Campus-ready · 24/7</div>", unsafe_allow_html=True)
@@ -314,7 +325,6 @@ if selected == "Student Chat":
 
     st.write("")
 
-    # --- RECENT UPDATES ---
     st.markdown("##### <span style='font-weight:700; color:#fff;'>Recent Circulars</span>", unsafe_allow_html=True)
     with st.spinner("Syncing latest updates..."):
         recent_files = get_recent_circulars()
@@ -335,7 +345,6 @@ if selected == "Student Chat":
 
     st.markdown("<br>", unsafe_allow_html=True)
 
-    # --- CHAT UI ---
     st.markdown("##### <span style='font-weight:700; color:#fff;'>💬 Ask Anything</span>", unsafe_allow_html=True)
     
     left_col, right_col = st.columns([7, 3])
@@ -378,50 +387,29 @@ if selected == "Student Chat":
                     new_db = FAISS.load_local("faiss_index", embeddings, allow_dangerous_deserialization=True)
                     docs = new_db.similarity_search(user_question)
                     chain = get_conversational_chain()
+                    response = chain.invoke({"input_documents": docs, "question": user_question}, return_only_outputs=True)
                     
-                    # Get response
-                    res = chain.invoke({"input_documents": docs, "question": user_question}, return_only_outputs=True)
-                    full_response = res['output_text']
-                    
+                    full_response = response['output_text']
                     st.session_state.chat_history.append({"role": "User", "text": user_question})
                     st.session_state.chat_history.append({"role": "AI", "text": full_response})
 
-                    # --- FIX: TYPING EFFECT INSIDE THE GREEN BOX ---
-                    # 1. Create a placeholder to hold the answer box
-                    answer_placeholder = st.empty()
+                    # ✅ FIX: Open Container
+                    st.markdown('<div class="answer-box-container">', unsafe_allow_html=True)
                     
-                    # 2. Build the output progressively
-                    accumulated_text = ""
-                    
-                    # 3. Stream logic (Manual loop to update the HTML inside the placeholder)
-                    words = full_response.split(" ")
-                    for i, word in enumerate(words):
-                        accumulated_text += word + " "
-                        
-                        # Update the whole HTML block with the current text
-                        answer_placeholder.markdown(f"""
-                        <div class="answer-box-container">
-                            <div class="answer-title">
-                                <span style="font-size: 24px;">🤖</span><span>CampusMind Answer</span>
-                            </div>
-                            <div class="answer-sub">Context-aware · From your uploaded circulars</div>
-                            <hr style="border-color: rgba(0, 200, 83, 0.3); margin: 16px 0;">
-                            <div class="answer-content">{accumulated_text}▌</div>
-                        </div>
-                        """, unsafe_allow_html=True)
-                        time.sleep(0.04)
-                    
-                    # 4. Final render (remove cursor)
-                    answer_placeholder.markdown(f"""
-                    <div class="answer-box-container">
+                    # Header Inside
+                    st.markdown("""
                         <div class="answer-title">
                             <span style="font-size: 24px;">🤖</span><span>CampusMind Answer</span>
                         </div>
                         <div class="answer-sub">Context-aware · From your uploaded circulars</div>
                         <hr style="border-color: rgba(0, 200, 83, 0.3); margin: 16px 0;">
-                        <div class="answer-content">{full_response}</div>
-                    </div>
                     """, unsafe_allow_html=True)
+                    
+                    # ✅ FIX: Stream Text Inside
+                    st.write_stream(stream_text(full_response))
+                    
+                    # ✅ FIX: Close Container
+                    st.markdown('</div>', unsafe_allow_html=True)
                     
                 else:
                     st.warning("⚠️ Knowledge base empty. Please upload circulars in the Admin Portal.")
@@ -468,6 +456,7 @@ if selected == "Admin Portal":
             st.warning("Please select at least one PDF file.")
     st.markdown('</div>', unsafe_allow_html=True)
 
+    # ✅ FIX: Inject Class for Button Styling
     st.markdown("""
     <script>
         const buttons = window.parent.document.querySelectorAll('button');
