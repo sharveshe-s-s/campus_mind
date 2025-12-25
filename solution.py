@@ -57,7 +57,7 @@ try:
 except FileNotFoundError: st.error("🚨 Secrets file not found!")
 
 # ==========================================
-# 2. HACKATHON WINNING CSS (PERFECTED)
+# 2. HACKATHON WINNING CSS (PRESERVED)
 # ==========================================
 st.markdown("""
 <style>
@@ -278,29 +278,28 @@ def get_recent_circulars():
             
     return unique_files[:3]
 
-# --- KEY FIX: MEMORY RETENTION LOGIC ---
+# --- KEY FIX: INTELLIGENT MEMORY MERGING ---
 def get_vector_store(text_chunks):
     """
-    Creates OR Updates the vector store.
-    If 'faiss_index' exists, it loads it and adds new texts (appending memory).
-    If not, it creates a new one.
+    Intelligently merges new data with the existing database.
     """
     embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
     
+    # 1. Try to load existing database
     if os.path.exists("faiss_index"):
         try:
-            # LOAD existing DB (Preserve memory)
+            st.write("🔄 Found existing knowledge base. Merging new data...")
             vector_store = FAISS.load_local("faiss_index", embeddings, allow_dangerous_deserialization=True)
-            # ADD new chunks
-            vector_store.add_texts(text_chunks)
-        except:
-            # Fallback if corrupt
+            vector_store.add_texts(text_chunks) # APPEND to existing
+            st.write("✅ Merged successfully.")
+        except Exception as e:
+            st.write(f"⚠️ Could not load existing index ({e}). Creating new one.")
             vector_store = FAISS.from_texts(text_chunks, embedding=embeddings)
     else:
-        # CREATE new DB (First run)
+        st.write("🆕 Creating new knowledge base.")
         vector_store = FAISS.from_texts(text_chunks, embedding=embeddings)
     
-    # SAVE updated DB
+    # 2. Save the updated database back to disk
     vector_store.save_local("faiss_index")
 
 def get_conversational_chain():
