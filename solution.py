@@ -57,7 +57,7 @@ try:
 except FileNotFoundError: st.error("🚨 Secrets file not found!")
 
 # ==========================================
-# 2. HACKATHON WINNING CSS (PRESERVED)
+# 2. HACKATHON WINNING CSS (RECTANGLE BUTTON + VISIBILITY)
 # ==========================================
 st.markdown("""
 <style>
@@ -99,7 +99,7 @@ st.markdown("""
     .sidebar-title { font-weight: 800; font-size: 24px; color: #fff; letter-spacing: 0.05em; }
     .sidebar-subtitle { font-size: 12px; color: rgba(255,255,255,0.6); letter-spacing: 0.1em; text-transform: uppercase; }
 
-    /* CENTERED HERO TITLE (TEXT ONLY) */
+    /* CENTERED HERO TITLE */
     .hero-container {
         display: flex;
         flex-direction: column;
@@ -164,14 +164,14 @@ st.markdown("""
     }
     div[data-testid="stButton"] button:hover { transform: translateY(-2px); }
 
-    /* RECTANGLE BUTTON FIX (ADMIN) */
+    /* --- STRICT RECTANGLE BUTTON FIX --- */
     .stButton button {
         white-space: nowrap !important;
         width: auto !important;
         display: inline-flex !important;
         align-items: center !important;
         justify-content: center !important;
-        border-radius: 8px !important;
+        border-radius: 8px !important; /* Force Rectangle */
     }
     
     .stButton button.process-btn {
@@ -254,9 +254,10 @@ def upload_to_drive(file_path, file_name):
         return file.get('id')
     except Exception as e: return f"Error: {e}"
 
+# --- FIX: GLOBAL CACHED FETCH FOR PERSISTENCE ---
+@st.cache_data(ttl=60) # Cache the result for 60 seconds so it persists across reloads for everyone
 def get_recent_circulars():
-    """Fetches circulars from Drive AND Session State (for instant update)."""
-    drive_files = []
+    """Fetches circulars from Drive. Cached globally."""
     try:
         if "gcp_service_account" in st.secrets:
             key_dict = st.secrets["gcp_service_account"]
@@ -264,42 +265,32 @@ def get_recent_circulars():
             service = build('drive', 'v3', credentials=creds)
             query = f"'{DRIVE_FOLDER_ID}' in parents and trashed=false"
             results = service.files().list(q=query, pageSize=3, fields="files(id, name, createdTime)", orderBy="createdTime desc", supportsAllDrives=True, includeItemsFromAllDrives=True).execute()
-            drive_files = results.get('files', [])
-    except: pass
+            return results.get('files', [])
+    except Exception as e:
+        # In a real app, you might log this error. For now, return empty list safely.
+        return []
+    return []
 
-    local_files = st.session_state.get('local_circulars', [])
-    combined = local_files + drive_files
-    seen_names = set()
-    unique_files = []
-    for f in combined:
-        if f['name'] not in seen_names:
-            unique_files.append(f)
-            seen_names.add(f['name'])
-            
-    return unique_files[:3]
-
-# --- KEY FIX: INTELLIGENT MEMORY MERGING ---
+# --- INTELLIGENT MEMORY MERGING ---
 def get_vector_store(text_chunks):
     """
     Intelligently merges new data with the existing database.
     """
     embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
     
-    # 1. Try to load existing database
     if os.path.exists("faiss_index"):
         try:
             st.write("🔄 Found existing knowledge base. Merging new data...")
             vector_store = FAISS.load_local("faiss_index", embeddings, allow_dangerous_deserialization=True)
-            vector_store.add_texts(text_chunks) # APPEND to existing
+            vector_store.add_texts(text_chunks) 
             st.write("✅ Merged successfully.")
         except Exception as e:
-            st.write(f"⚠️ Could not load existing index ({e}). Creating new one.")
+            st.write(f"⚠️ Could not load existing index. Creating new one.")
             vector_store = FAISS.from_texts(text_chunks, embedding=embeddings)
     else:
         st.write("🆕 Creating new knowledge base.")
         vector_store = FAISS.from_texts(text_chunks, embedding=embeddings)
     
-    # 2. Save the updated database back to disk
     vector_store.save_local("faiss_index")
 
 def get_conversational_chain():
@@ -317,7 +308,6 @@ lottie_admin = load_lottieurl("https://assets2.lottiefiles.com/packages/lf20_w51
 
 # 3b. SESSION STATE INIT
 if "chat_history" not in st.session_state: st.session_state.chat_history = []
-if "local_circulars" not in st.session_state: st.session_state.local_circulars = [] 
 
 # ==========================================
 # 4. SIDEBAR
@@ -360,6 +350,8 @@ if selected == "Student Chat":
 
     # --- RECENT UPDATES ---
     st.markdown("##### <span style='font-weight:700; color:#fff;'>Recent Circulars</span>", unsafe_allow_html=True)
+    
+    # Now using Cached Function
     with st.spinner("Syncing latest updates..."):
         recent_files = get_recent_circulars()
         
@@ -369,7 +361,6 @@ if selected == "Student Chat":
         for i, file in enumerate(recent_files):
             fname = file.get('name', 'Untitled Circular')
             with cols[i]:
-                # Force white color on filename via inline CSS
                 st.markdown(f"""
                 <div class="glass-card">
                     <div style="color: #00ffc3; font-weight: 700; font-size: 13px; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 10px;">New Circular</div>
@@ -470,7 +461,6 @@ if selected == "Student Chat":
 # PAGE 2: ADMIN PORTAL
 # ==========================================
 if selected == "Admin Portal":
-    # --- FIX: HUGE COLUMN WIDTH FOR BUTTON ---
     c1, c2 = st.columns([3, 7]) 
     with c1:
         if lottie_admin: st_lottie(lottie_admin, height=180)
@@ -484,7 +474,6 @@ if selected == "Admin Portal":
     
     st.write("")
     
-    # Button with specific ID for styling
     if st.button("Process & Upload", key="process_btn", help="Click to process and upload documents"):
         if pdf_docs:
             with st.status("Processing...", expanded=True):
@@ -498,15 +487,14 @@ if selected == "Admin Portal":
                     upload_to_drive(pdf.name, pdf.name)
                     if os.path.exists(pdf.name): os.remove(pdf.name)
                 
-                # Update Session State (INSTANT FIX)
-                for pdf in pdf_docs:
-                    st.session_state.local_circulars.insert(0, {"name": pdf.name, "id": "local"})
-
                 text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
                 chunks = text_splitter.split_text(text)
                 
                 # Updated Vector Store Function
                 get_vector_store(chunks)
+                
+                # --- FIX: CLEAR CACHE FOR INSTANT GLOBAL UPDATE ---
+                get_recent_circulars.clear()
                 
                 st.success("✅ Knowledge base updated successfully!")
                 time.sleep(1)
@@ -515,7 +503,6 @@ if selected == "Admin Portal":
             st.warning("Please select at least one PDF file.")
     st.markdown('</div>', unsafe_allow_html=True)
 
-    # Inject Class
     st.markdown("""
     <script>
         const buttons = window.parent.document.querySelectorAll('button');
