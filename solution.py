@@ -30,8 +30,7 @@ from openai import OpenAI
 def force_dark_mode():
     config_dir = ".streamlit"
     config_path = os.path.join(config_dir, "config.toml")
-    if not os.path.exists(config_dir):
-        os.makedirs(config_dir)
+    if not os.path.exists(config_dir): os.makedirs(config_dir)
     config_content = """
 [theme]
 base = "dark"
@@ -42,8 +41,7 @@ textColor = "#f5f7fb"
 font = "sans serif"
     """
     if not os.path.exists(config_path):
-        with open(config_path, "w") as f:
-            f.write(config_content)
+        with open(config_path, "w") as f: f.write(config_content)
         st.rerun()
 
 force_dark_mode()
@@ -54,11 +52,9 @@ force_dark_mode()
 st.set_page_config(page_title="CampusMind AI", page_icon="🎓", layout="wide")
 
 try:
-    if "OPENAI_API_KEY" in st.secrets:
-        os.environ["OPENAI_API_KEY"] = st.secrets["OPENAI_API_KEY"]
-    DRIVE_FOLDER_ID = '1IRAXoxny14JvI6UbJ1zPyUduwlzm5Egm'
-except FileNotFoundError:
-    st.error("🚨 Secrets file not found!")
+    if "OPENAI_API_KEY" in st.secrets: os.environ["OPENAI_API_KEY"] = st.secrets["OPENAI_API_KEY"]
+    DRIVE_FOLDER_ID = '1IRAXoxny14JvI6UbJ1zPyUduwlzm5Egm' 
+except FileNotFoundError: st.error("🚨 Secrets file not found!")
 
 # ==========================================
 # 2. HACKATHON WINNING CSS (FINAL POLISH)
@@ -228,54 +224,37 @@ def load_lottieurl(url):
     try:
         r = requests.get(url, timeout=3)
         return r.json() if r.status_code == 200 else None
-    except:
-        return None
+    except: return None
 
 def upload_to_drive(file_path, file_name):
     try:
-        if "gcp_service_account" not in st.secrets:
-            return "Error: Secrets missing"
+        if "gcp_service_account" not in st.secrets: return "Error: Secrets missing"
         key_dict = st.secrets["gcp_service_account"]
-        creds = service_account.Credentials.from_service_account_info(
-            key_dict,
-            scopes=['https://www.googleapis.com/auth/drive']
-        )
+        creds = service_account.Credentials.from_service_account_info(key_dict, scopes=['https://www.googleapis.com/auth/drive'])
         service = build('drive', 'v3', credentials=creds)
         file_metadata = {'name': file_name, 'parents': [DRIVE_FOLDER_ID]}
         media = MediaFileUpload(file_path, mimetype='application/pdf')
-        file = service.files().create(
-            body=file_metadata, media_body=media, fields='id'
-        ).execute()
+        file = service.files().create(body=file_metadata, media_body=media, fields='id').execute()
         return file.get('id')
-    except Exception as e:
-        return f"Error: {e}"
+    except Exception as e: return f"Error: {e}"
 
-# UPDATED: more robust listing so circulars always show
 def get_recent_circulars():
     try:
-        if "gcp_service_account" not in st.secrets:
-            return []
+        if "gcp_service_account" not in st.secrets: return []
         key_dict = st.secrets["gcp_service_account"]
-        creds = service_account.Credentials.from_service_account_info(
-            key_dict,
-            scopes=['https://www.googleapis.com/auth/drive']
-        )
+        creds = service_account.Credentials.from_service_account_info(key_dict, scopes=['https://www.googleapis.com/auth/drive'])
         service = build('drive', 'v3', credentials=creds)
-
-        query = f"'{DRIVE_FOLDER_ID}' in parents and trashed = false"
+        query = f"'{DRIVE_FOLDER_ID}' in parents and trashed=false"
         results = service.files().list(
             q=query,
             pageSize=3,
-            orderBy="createdTime desc",
             fields="files(id, name, createdTime)",
+            orderBy="createdTime desc",
             supportsAllDrives=True,
-            includeItemsFromAllDrives=True,
-            corpora="allDrives"
+            includeItemsFromAllDrives=True
         ).execute()
-
-        return results.get("files", [])
-    except Exception:
-        return []
+        return results.get('files', [])
+    except: return []
 
 def get_vector_store(text_chunks):
     embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
@@ -300,7 +279,7 @@ lottie_admin = load_lottieurl("https://assets2.lottiefiles.com/packages/lf20_w51
 
 # 3b. SESSION STATE
 if "chat_history" not in st.session_state:
-    st.session_state.chat_history = []
+    st.session_state.chat_history = [] 
 
 # ==========================================
 # 4. SIDEBAR
@@ -312,11 +291,9 @@ with st.sidebar:
     st.markdown("<br>", unsafe_allow_html=True)
 
     selected = option_menu(
-        "Navigation",
-        ["Student Chat", "Admin Portal", "About"],
+        "Navigation", ["Student Chat", "Admin Portal", "About"],
         icons=['chat-dots', 'cloud-upload', 'info-circle'],
-        menu_icon="cast",
-        default_index=0,
+        menu_icon="cast", default_index=0,
         styles={
             "container": {"background-color": "transparent", "padding": "0"},
             "icon": {"color": "#c0c7df", "font-size": "18px"},
@@ -328,38 +305,28 @@ with st.sidebar:
     st.caption("v2.0 · Hackathon Edition")
 
 # ==========================================
-# PAGE 1: STUDENT CHAT
+# PAGE 1: STUDENT CHAT  (ONLY THIS SECTION CHANGED)
 # ==========================================
 if selected == "Student Chat":
     
-    # Bigger hero visual
-    col1, col2 = st.columns([1.3, 1.4])
+    col1, col2 = st.columns([1, 1.2])
     
     with col1:
         if lottie_student_ai:
-            st_lottie(lottie_student_ai, height=380, key="hero_anim")
+            st_lottie(lottie_student_ai, height=300, key="hero_anim")
         else:
-            st.image(fallback_image, use_column_width=True)
+            st.image(fallback_image, width=350)
             
     with col2:
-        st.markdown(
-            "<div style='display:flex;flex-direction:column;justify-content:center;height:300px;'>",
-            unsafe_allow_html=True
-        )
+        st.markdown("<div style='display:flex;flex-direction:column;justify-content:center;height:300px;'>", unsafe_allow_html=True)
         st.markdown("<div class='hero-badge'>⚡ Campus-ready · 24/7</div>", unsafe_allow_html=True)
-        st.markdown(
-            "<h1 class='shimmer-text' style='font-size: 56px; margin-bottom: 12px; line-height: 1.1;'>CampusMind AI</h1>",
-            unsafe_allow_html=True
-        )
-        st.markdown(
-            "<p class='hero-tagline'>Ask about exams, circulars, or anything on campus — get instant, tailored answers.</p>",
-            unsafe_allow_html=True
-        )
+        st.markdown("<h1 class='shimmer-text' style='font-size: 56px; margin-bottom: 12px; line-height: 1.1;'>CampusMind AI</h1>", unsafe_allow_html=True)
+        st.markdown("<p class='hero-tagline'>Ask about exams, circulars, or anything on campus — get instant, tailored answers.</p>", unsafe_allow_html=True)
         st.markdown("</div>", unsafe_allow_html=True)
 
     st.write("")
 
-    # RECENT CIRCULARS
+    # RECENT CIRCULARS – FIXED NAME DISPLAY
     st.markdown("##### <span style='font-weight:700; color:#fff;'>Recent Circulars</span>", unsafe_allow_html=True)
     with st.spinner("Syncing latest updates..."):
         recent_files = get_recent_circulars()
@@ -401,13 +368,7 @@ if selected == "Student Chat":
         with st.container():
             c_mic, c_input = st.columns([1, 8])
             with c_mic:
-                audio = mic_recorder(
-                    start_prompt="🎙️",
-                    stop_prompt="⏹️",
-                    key='recorder',
-                    format="webm",
-                    just_once=True
-                )
+                audio = mic_recorder(start_prompt="🎙️", stop_prompt="⏹️", key='recorder', format="webm", just_once=True)
             with c_input:
                 voice_text = ""
                 if audio:
@@ -416,13 +377,9 @@ if selected == "Student Chat":
                             audio_file = io.BytesIO(audio['bytes'])
                             audio_file.name = "audio.webm"
                             client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
-                            transcript = client.audio.transcriptions.create(
-                                model="whisper-1",
-                                file=audio_file
-                            )
+                            transcript = client.audio.transcriptions.create(model="whisper-1", file=audio_file)
                             voice_text = transcript.text
-                        except:
-                            pass
+                        except: pass
                 default_val = voice_text if voice_text else ""
                 user_question = st.text_input(
                     "Search",
@@ -433,10 +390,7 @@ if selected == "Student Chat":
 
     with right_col:
         st.markdown("<div class='history-card'>", unsafe_allow_html=True)
-        st.markdown(
-            "<div style='font-weight:700; font-size:14px; color:#fff; margin-bottom:12px;'>RECENT TURNS</div>",
-            unsafe_allow_html=True
-        )
+        st.markdown("<div style='font-weight:700; font-size:14px; color:#fff; margin-bottom:12px;'>RECENT TURNS</div>", unsafe_allow_html=True)
         if st.session_state.chat_history:
             for item in st.session_state.chat_history[-3:]:
                 label = "You" if item["role"] == "User" else "AI"
@@ -445,10 +399,7 @@ if selected == "Student Chat":
                     unsafe_allow_html=True
                 )
         else:
-            st.markdown(
-                "<div style='font-size:13px;color:rgba(255,255,255,0.6);'>Your conversation history will appear here.</div>",
-                unsafe_allow_html=True
-            )
+            st.markdown("<div style='font-size:13px;color:rgba(255,255,255,0.6);'>Your conversation history will appear here.</div>", unsafe_allow_html=True)
         st.markdown("</div>", unsafe_allow_html=True)
 
     if user_question:
@@ -456,26 +407,15 @@ if selected == "Student Chat":
             try:
                 embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
                 if os.path.exists("faiss_index"):
-                    new_db = FAISS.load_local(
-                        "faiss_index",
-                        embeddings,
-                        allow_dangerous_deserialization=True
-                    )
+                    new_db = FAISS.load_local("faiss_index", embeddings, allow_dangerous_deserialization=True)
                     docs = new_db.similarity_search(user_question)
                     chain = get_conversational_chain()
                     
-                    res = chain.invoke(
-                        {"input_documents": docs, "question": user_question},
-                        return_only_outputs=True
-                    )
+                    res = chain.invoke({"input_documents": docs, "question": user_question}, return_only_outputs=True)
                     full_response = res['output_text']
                     
-                    st.session_state.chat_history.append(
-                        {"role": "User", "text": user_question}
-                    )
-                    st.session_state.chat_history.append(
-                        {"role": "AI", "text": full_response}
-                    )
+                    st.session_state.chat_history.append({"role": "User", "text": user_question})
+                    st.session_state.chat_history.append({"role": "AI", "text": full_response})
 
                     answer_placeholder = st.empty()
                     accumulated_text = ""
@@ -517,25 +457,14 @@ if selected == "Student Chat":
 if selected == "Admin Portal":
     c1, c2 = st.columns([1, 3])
     with c1:
-        if lottie_admin:
-            st_lottie(lottie_admin, height=180)
+        if lottie_admin: st_lottie(lottie_admin, height=180)
     with c2:
         st.title("Admin Upload")
-        st.markdown(
-            '<p style="color:#c0c7df;font-size:16px;">Securely upload circulars and instantly refresh the AI\'s knowledge base.</p>',
-            unsafe_allow_html=True
-        )
+        st.markdown('<p style="color:#c0c7df;font-size:16px;">Securely upload circulars and instantly refresh the AI\'s knowledge base.</p>', unsafe_allow_html=True)
 
     st.markdown('<div class="glass-card">', unsafe_allow_html=True)
-    st.markdown(
-        '<div class="chip">📁 <span>Upload PDF circulars</span></div><br><br>',
-        unsafe_allow_html=True
-    )
-    pdf_docs = st.file_uploader(
-        "Select PDF Files",
-        accept_multiple_files=True,
-        type=['pdf']
-    )
+    st.markdown('<div class="chip">📁 <span>Upload PDF circulars</span></div><br><br>', unsafe_allow_html=True)
+    pdf_docs = st.file_uploader("Select PDF Files", accept_multiple_files=True, type=['pdf'])
     
     st.write("")
     
@@ -547,18 +476,12 @@ if selected == "Admin Portal":
                     with pdfplumber.open(pdf) as pdf_file:
                         for page in pdf_file.pages:
                             t = page.extract_text()
-                            if t:
-                                text += t
-                    with open(pdf.name, "wb") as f:
-                        f.write(pdf.getbuffer())
+                            if t: text += t
+                    with open(pdf.name, "wb") as f: f.write(pdf.getbuffer())
                     upload_to_drive(pdf.name, pdf.name)
-                    if os.path.exists(pdf.name):
-                        os.remove(pdf.name)
+                    if os.path.exists(pdf.name): os.remove(pdf.name)
                 
-                text_splitter = RecursiveCharacterTextSplitter(
-                    chunk_size=1000,
-                    chunk_overlap=100
-                )
+                text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
                 chunks = text_splitter.split_text(text)
                 get_vector_store(chunks)
                 st.success("✅ Knowledge base updated successfully!")
