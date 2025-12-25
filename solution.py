@@ -37,7 +37,45 @@ except Exception as e:
     st.error(f"🚨 Secrets Error: {e}")
 
 # ==========================================
-# 1. HELPER FUNCTIONS
+# 1. SMART MODEL SELECTOR (THE FIX)
+# ==========================================
+def get_available_model_name():
+    """
+    Asks Google which models are available to this API Key 
+    and returns the best one to avoid 404 errors.
+    """
+    try:
+        # List all models
+        models = [m.name for m in genai.list_models()]
+        
+        # Priority list (Newest/Fastest first)
+        priorities = [
+            'models/gemini-1.5-flash',
+            'models/gemini-1.5-pro',
+            'models/gemini-pro',
+            'models/gemini-1.0-pro'
+        ]
+        
+        for p in priorities:
+            if p in models:
+                # Remove 'models/' prefix for LangChain compatibility if needed
+                return p.replace("models/", "")
+        
+        # Fallback: Just take the first generative model found
+        for m in models:
+            if "generateContent" in m.supported_generation_methods:
+                return m.name.replace("models/", "")
+                
+        return "gemini-pro" # Blind fallback
+    except Exception as e:
+        return "gemini-pro"
+
+# CACHE THE MODEL NAME SO WE DON'T CALL API EVERY TIME
+if "valid_model_name" not in st.session_state:
+    st.session_state.valid_model_name = get_available_model_name()
+
+# ==========================================
+# 2. HELPER FUNCTIONS
 # ==========================================
 def load_lottieurl(url):
     try:
@@ -83,7 +121,8 @@ if not get_global_memory().files:
 # --- GEMINI FUNCTIONS ---
 def transcribe_audio_gemini(audio_bytes):
     try:
-        model = genai.GenerativeModel("gemini-1.5-flash")
+        model_name = st.session_state.valid_model_name
+        model = genai.GenerativeModel(model_name)
         response = model.generate_content([
             "Transcribe this audio exactly.",
             {"mime_type": "audio/webm", "data": audio_bytes}
@@ -92,14 +131,14 @@ def transcribe_audio_gemini(audio_bytes):
     except:
         return ""
 
-# --- INDEX HANDLING (VERSION 8 - INVINCIBLE) ---
-INDEX_NAME = "faiss_index_v8"
+# --- INDEX HANDLING (VERSION 9 - FINAL) ---
+INDEX_NAME = "faiss_index_v9"
 
 def get_vector_store_batched(text_chunks):
     # Using 'models/text-embedding-004' (Newer, usually better limits)
     embeddings = GoogleGenerativeAIEmbeddings(model="models/text-embedding-004")
     
-    # TINY BATCH SIZE TO SURVIVE FREE TIER
+    # TINY BATCH SIZE (5) TO SURVIVE FREE TIER
     batch_size = 5 
     total_chunks = len(text_chunks)
     progress_text = "Vectorizing... (Auto-throttling enabled)"
@@ -158,8 +197,9 @@ def get_conversational_chain():
     Question: {question}
     Answer:
     """
-    # gemini-pro is the safest choice for RAG
-    model = ChatGoogleGenerativeAI(model="gemini-pro", temperature=0.3)
+    # USE THE DETECTED MODEL NAME
+    model_name = st.session_state.valid_model_name
+    model = ChatGoogleGenerativeAI(model=model_name, temperature=0.3)
     prompt = PromptTemplate(template=prompt_template, input_variables=["context", "question"])
     return load_qa_chain(model, chain_type="stuff", prompt=prompt)
 
@@ -178,6 +218,10 @@ with st.sidebar:
     st.image("https://cdn-icons-png.flaticon.com/512/4712/4712035.png", width=64)
     st.title("CampusMind")
     selected = option_menu("Nav", ["Student Chat", "Admin Portal"], icons=['chat', 'cloud'], default_index=0)
+    
+    st.markdown("---")
+    st.caption("DEBUG INFO:")
+    st.caption(f"Using Model: `{st.session_state.valid_model_name}`")
 
 # ==========================================
 # PAGE 1: CHAT
@@ -239,7 +283,6 @@ if selected == "Admin Portal":
                 text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
                 chunks = text_splitter.split_text(raw_text)
                 
-                # CALL THE NEW INVINCIBLE FUNCTION
                 get_vector_store_batched(chunks)
                 
                 st.success("Knowledge Base Updated Successfully!")
