@@ -57,7 +57,7 @@ try:
 except FileNotFoundError: st.error("🚨 Secrets file not found!")
 
 # ==========================================
-# 2. HACKATHON WINNING CSS (RECTANGLE BUTTON + VISIBILITY)
+# 2. HACKATHON WINNING CSS (PERFECTED)
 # ==========================================
 st.markdown("""
 <style>
@@ -164,14 +164,14 @@ st.markdown("""
     }
     div[data-testid="stButton"] button:hover { transform: translateY(-2px); }
 
-    /* --- STRICT RECTANGLE BUTTON FIX --- */
+    /* RECTANGLE BUTTON FIX (ADMIN) */
     .stButton button {
         white-space: nowrap !important;
         width: auto !important;
         display: inline-flex !important;
         align-items: center !important;
         justify-content: center !important;
-        border-radius: 8px !important; /* Force Rectangle */
+        border-radius: 8px !important;
     }
     
     .stButton button.process-btn {
@@ -254,28 +254,27 @@ def upload_to_drive(file_path, file_name):
         return file.get('id')
     except Exception as e: return f"Error: {e}"
 
-# --- FIX: GLOBAL CACHED FETCH FOR PERSISTENCE ---
-@st.cache_data(ttl=60) # Cache the result for 60 seconds so it persists across reloads for everyone
+# --- KEY FIX: REMOVED CACHING FOR REAL-TIME UPDATES ---
 def get_recent_circulars():
-    """Fetches circulars from Drive. Cached globally."""
+    """
+    Fetches directly from Drive every time. No caching.
+    Ensures everyone sees new files instantly after refresh.
+    """
     try:
         if "gcp_service_account" in st.secrets:
             key_dict = st.secrets["gcp_service_account"]
             creds = service_account.Credentials.from_service_account_info(key_dict, scopes=['https://www.googleapis.com/auth/drive'])
             service = build('drive', 'v3', credentials=creds)
             query = f"'{DRIVE_FOLDER_ID}' in parents and trashed=false"
+            # Sort by createdTime descending to get the newest first
             results = service.files().list(q=query, pageSize=3, fields="files(id, name, createdTime)", orderBy="createdTime desc", supportsAllDrives=True, includeItemsFromAllDrives=True).execute()
             return results.get('files', [])
-    except Exception as e:
-        # In a real app, you might log this error. For now, return empty list safely.
+    except: 
         return []
     return []
 
 # --- INTELLIGENT MEMORY MERGING ---
 def get_vector_store(text_chunks):
-    """
-    Intelligently merges new data with the existing database.
-    """
     embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
     
     if os.path.exists("faiss_index"):
@@ -306,7 +305,6 @@ def get_conversational_chain():
 
 lottie_admin = load_lottieurl("https://assets2.lottiefiles.com/packages/lf20_w51pcehl.json")
 
-# 3b. SESSION STATE INIT
 if "chat_history" not in st.session_state: st.session_state.chat_history = []
 
 # ==========================================
@@ -337,7 +335,6 @@ with st.sidebar:
 # ==========================================
 if selected == "Student Chat":
     
-    # --- HERO SECTION: TEXT ONLY, CENTERED ---
     st.markdown("""
     <div class="hero-container">
         <div class="hero-badge">⚡ Campus-ready · 24/7</div>
@@ -348,12 +345,10 @@ if selected == "Student Chat":
 
     st.write("")
 
-    # --- RECENT UPDATES ---
     st.markdown("##### <span style='font-weight:700; color:#fff;'>Recent Circulars</span>", unsafe_allow_html=True)
     
-    # Now using Cached Function
-    with st.spinner("Syncing latest updates..."):
-        recent_files = get_recent_circulars()
+    # FETCH REAL-TIME DATA (No cache)
+    recent_files = get_recent_circulars()
         
     if recent_files:
         c1, c2, c3 = st.columns(3)
@@ -372,7 +367,6 @@ if selected == "Student Chat":
 
     st.markdown("<br>", unsafe_allow_html=True)
 
-    # --- CHAT UI ---
     st.markdown("##### <span style='font-weight:700; color:#fff;'>💬 Ask Anything</span>", unsafe_allow_html=True)
     
     left_col, right_col = st.columns([7, 3])
@@ -422,7 +416,6 @@ if selected == "Student Chat":
                     st.session_state.chat_history.append({"role": "User", "text": user_question})
                     st.session_state.chat_history.append({"role": "AI", "text": full_response})
 
-                    # --- BOX FIX: SINGLE PLACEHOLDER UPDATE ---
                     answer_placeholder = st.empty()
                     accumulated_text = ""
                     words = full_response.split(" ")
@@ -487,14 +480,12 @@ if selected == "Admin Portal":
                     upload_to_drive(pdf.name, pdf.name)
                     if os.path.exists(pdf.name): os.remove(pdf.name)
                 
+                # Small delay to ensure Google Drive processes the file metadata before we fetch it again
+                time.sleep(2)
+
                 text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
                 chunks = text_splitter.split_text(text)
-                
-                # Updated Vector Store Function
                 get_vector_store(chunks)
-                
-                # --- FIX: CLEAR CACHE FOR INSTANT GLOBAL UPDATE ---
-                get_recent_circulars.clear()
                 
                 st.success("✅ Knowledge base updated successfully!")
                 time.sleep(1)
