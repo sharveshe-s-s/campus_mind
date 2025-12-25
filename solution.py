@@ -83,28 +83,28 @@ if not get_global_memory().files:
 # --- GEMINI FUNCTIONS ---
 def transcribe_audio_gemini(audio_bytes):
     try:
-        # Using 1.5 Flash for audio
+        # Fallback to the most standard model for audio if Flash fails
         model = genai.GenerativeModel("gemini-1.5-flash")
         response = model.generate_content([
             "Transcribe this audio exactly.",
             {"mime_type": "audio/webm", "data": audio_bytes}
         ])
         return response.text
-    except: return ""
+    except Exception as e:
+        return ""
 
-# --- INDEX HANDLING ---
-INDEX_NAME = "faiss_index_v3"
+# --- INDEX HANDLING (VERSION 4 - SAFE MODE) ---
+INDEX_NAME = "faiss_index_v4"
 
 def get_vector_store(text_chunks):
-    # Using specific model version for stability
-    embeddings = GoogleGenerativeAIEmbeddings(model="models/text-embedding-004")
+    # USE THE SAFEST EMBEDDING MODEL AVAILABLE
+    embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
     
     if os.path.exists(INDEX_NAME):
         try:
             vector_store = FAISS.load_local(INDEX_NAME, embeddings, allow_dangerous_deserialization=True)
             vector_store.add_texts(text_chunks) 
         except:
-            # If loading fails (e.g. corruption), start fresh
             vector_store = FAISS.from_texts(text_chunks, embedding=embeddings)
     else:
         vector_store = FAISS.from_texts(text_chunks, embedding=embeddings)
@@ -118,8 +118,8 @@ def get_conversational_chain():
     Question: {question}
     Answer:
     """
-    # Using 'gemini-1.5-flash-latest' to ensure we hit the valid endpoint
-    model = ChatGoogleGenerativeAI(model="gemini-1.5-flash-latest", temperature=0.3)
+    # USE "gemini-pro" - IT IS THE MOST STABLE AND WIDELY SUPPORTED
+    model = ChatGoogleGenerativeAI(model="gemini-pro", temperature=0.3)
     prompt = PromptTemplate(template=prompt_template, input_variables=["context", "question"])
     return load_qa_chain(model, chain_type="stuff", prompt=prompt)
 
@@ -168,7 +168,8 @@ if selected == "Student Chat":
     if user_question:
         with st.spinner("Thinking..."):
             try:
-                embeddings = GoogleGenerativeAIEmbeddings(model="models/text-embedding-004")
+                # USE SAFE EMBEDDINGS HERE TOO
+                embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
                 if os.path.exists(INDEX_NAME):
                     new_db = FAISS.load_local(INDEX_NAME, embeddings, allow_dangerous_deserialization=True)
                     docs = new_db.similarity_search(user_question)
