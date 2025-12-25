@@ -25,18 +25,12 @@ from googleapiclient.http import MediaFileUpload
 from openai import OpenAI
 
 # ==========================================
-# 0. THEME ENGINE (FIXES WHITE SIDEBAR & INVISIBLE TEXT)
+# 0. THEME ENGINE (Force Dark Mode)
 # ==========================================
 def force_dark_mode():
-    """
-    Writes a config file to force Streamlit into Dark Mode.
-    """
     config_dir = ".streamlit"
     config_path = os.path.join(config_dir, "config.toml")
-    
-    if not os.path.exists(config_dir):
-        os.makedirs(config_dir)
-        
+    if not os.path.exists(config_dir): os.makedirs(config_dir)
     config_content = """
 [theme]
 base = "dark"
@@ -47,8 +41,7 @@ textColor = "#fafafa"
 font = "sans serif"
     """
     if not os.path.exists(config_path):
-        with open(config_path, "w") as f:
-            f.write(config_content)
+        with open(config_path, "w") as f: f.write(config_content)
         st.rerun()
 
 force_dark_mode()
@@ -70,39 +63,37 @@ except FileNotFoundError:
 # ==========================================
 st.markdown("""
 <style>
-    /* 1. BACKGROUND: Deep Cyberpunk Gradient */
+    /* 1. BACKGROUND */
     .stApp {
         background: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%);
     }
 
-    /* 2. SIDEBAR POLISH */
+    /* 2. SIDEBAR */
     section[data-testid="stSidebar"] {
         background-color: rgba(0, 0, 0, 0.4);
         border-right: 1px solid rgba(255, 255, 255, 0.1);
     }
 
-    /* 3. INPUT BOX - THE "HIGH VISIBILITY" FIX */
-    /* We make the input box WHITE with BLACK text. Cannot miss it. */
+    /* 3. INPUT BOX (White Box, Black Text - High Visibility) */
     .stTextInput input {
         background-color: #ffffff !important;
         color: #000000 !important;
         border-radius: 12px;
-        padding: 12px;
+        padding: 15px;
         font-size: 16px;
-        border: 2px solid transparent;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        border: 2px solid #ccc;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
     }
     .stTextInput input:focus {
         border-color: #00C853 !important;
         box-shadow: 0 0 15px rgba(0, 200, 83, 0.5);
     }
 
-    /* 4. MIC BUTTON (Neon Glow) */
+    /* 4. MIC BUTTON */
     div[data-testid="stButton"] button {
         border-radius: 50%;
         width: 55px;
         height: 55px;
-        padding: 0;
         background: rgba(0, 200, 83, 0.2);
         border: 2px solid #00C853;
         color: #00C853;
@@ -112,11 +103,10 @@ st.markdown("""
     div[data-testid="stButton"] button:hover {
         background: #00C853;
         color: white;
-        box-shadow: 0 0 20px #00C853;
         transform: scale(1.1);
     }
-
-    /* 5. PROCESS BUTTON (Pill Shape Override) */
+    
+    /* 5. PROCESS BUTTON OVERRIDE (For Admin) */
     .stButton button.process-btn {
         width: auto;
         border-radius: 8px;
@@ -133,14 +123,26 @@ st.markdown("""
         box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
     }
 
-    /* 7. AI ANSWER BOX */
+    /* 7. QUICK ACTION PILLS */
+    .quick-pill {
+        display: inline-block;
+        background: rgba(255,255,255,0.1);
+        padding: 5px 15px;
+        border-radius: 20px;
+        margin-right: 10px;
+        font-size: 14px;
+        border: 1px solid rgba(255,255,255,0.2);
+        color: #ddd;
+    }
+
+    /* 8. ANSWER BOX */
     .answer-box {
         background: rgba(0, 0, 0, 0.6);
         border-left: 6px solid #00C853;
         padding: 25px;
         border-radius: 12px;
         margin-top: 20px;
-        color: #ffffff !important; /* Force White Text */
+        color: #ffffff !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -193,12 +195,14 @@ def get_conversational_chain():
     prompt = PromptTemplate(template=prompt_template, input_variables=["context", "question"])
     return load_qa_chain(model, chain_type="stuff", prompt=prompt)
 
-# ASSETS
-lottie_hello = load_lottieurl("https://lottie.host/5a919f2d-304b-4b15-9c8b-30234157d6b3/2k2k2k2k2k.json") 
-lottie_upload = load_lottieurl("https://assets2.lottiefiles.com/packages/lf20_w51pcehl.json")
+# --- ASSETS ---
+# New "Futuristic AI" Animation for Student Chat
+lottie_student_ai = load_lottieurl("https://lottie.host/020cc52c-7472-4632-841f-82559b95427d/21H5gH1p7E.json") 
+# Admin Laptop Animation
+lottie_admin = load_lottieurl("https://assets2.lottiefiles.com/packages/lf20_w51pcehl.json")
 
 # ==========================================
-# 4. SIDEBAR
+# 4. SIDEBAR MENU
 # ==========================================
 with st.sidebar:
     st.image("https://cdn-icons-png.flaticon.com/512/4712/4712035.png", width=50)
@@ -215,27 +219,37 @@ with st.sidebar:
         }
     )
     st.markdown("---")
-    st.caption("v2.0 | Hackathon Edition")
+    st.caption("Hackathon Edition v2.0")
 
 # ==========================================
-# PAGE 1: STUDENT CHAT (Winner UI)
+# PAGE 1: STUDENT CHAT (THE "BEST WEBSITE" LOOK)
 # ==========================================
 if selected == "Student Chat":
     
-    # --- HERO HEADER ---
-    col1, col2 = st.columns([1, 3])
-    with col1:
-        if lottie_hello: 
-            st_lottie(lottie_hello, height=150, key="hero_anim")
-    with col2:
-        st.markdown("<h1 style='padding-top: 20px; font-size: 50px;'>CampusMind AI</h1>", unsafe_allow_html=True)
-        st.markdown("<p style='font-size: 18px; opacity: 0.8;'>Your 24/7 Smart Campus Assistant</p>", unsafe_allow_html=True)
+    # --- HERO SECTION (Split Layout) ---
+    # Left: Cool Animation | Right: Welcome Text
+    col_hero_1, col_hero_2 = st.columns([1, 2])
+    
+    with col_hero_1:
+        if lottie_student_ai: 
+            st_lottie(lottie_student_ai, height=200, key="ai_anim")
+    
+    with col_hero_2:
+        st.markdown("<br>", unsafe_allow_html=True) # Spacer
+        st.markdown("<h1 style='font-size: 48px; margin-bottom: 0;'>CampusMind AI</h1>", unsafe_allow_html=True)
+        st.markdown("""
+        <div style='display: flex; align-items: center; gap: 10px; margin-top: 10px;'>
+            <span style='background: #00C853; width: 10px; height: 10px; border-radius: 50%; display: inline-block;'></span>
+            <span style='color: #bbb; font-size: 16px;'>System Online • Knowledge Base Active</span>
+        </div>
+        """, unsafe_allow_html=True)
 
-    st.write("") 
+    st.markdown("---")
 
-    # --- RECENT UPDATES (GLASS CARDS) ---
-    st.markdown("##### 📢 Recent Updates")
-    with st.spinner("Syncing..."):
+    # --- RECENT UPDATES (Dashboard Widgets) ---
+    st.subheader("📢 Live Circulars")
+    
+    with st.spinner("Syncing with Admin Office..."):
         recent_files = get_recent_circulars()
         
     if recent_files:
@@ -245,22 +259,32 @@ if selected == "Student Chat":
             with cols[i]:
                 st.markdown(f"""
                 <div class="glass-card">
-                    <div style="color: #00C853; font-weight: bold; font-size: 20px;">📄 New</div>
-                    <div style="margin-top: 5px; font-size: 14px; color: white;">{file['name'][:25]}...</div>
+                    <div style="color: #00C853; font-weight: bold; font-size: 18px; margin-bottom: 5px;">📄 Update {i+1}</div>
+                    <div style="font-size: 14px; color: white;">{file['name'][:25]}...</div>
+                    <div style="font-size: 12px; color: #888; margin-top: 5px;">Click mic to ask about this</div>
                 </div>
                 """, unsafe_allow_html=True)
     else:
-        st.info("No recent circulars uploaded.")
+        st.info("No recent circulars found on Drive.")
 
-    st.markdown("---")
-
-    # --- CHAT INTERFACE ---
-    st.markdown("##### 💬 Ask Anything")
+    # --- COMMAND CENTER (The Chat) ---
+    st.markdown("<br>", unsafe_allow_html=True)
     
+    # "Quick Prompts" Visuals
+    st.markdown("""
+    <div style="margin-bottom: 10px;">
+        <span class="quick-pill">📅 Exams</span>
+        <span class="quick-pill">🚌 Bus Routes</span>
+        <span class="quick-pill">💰 Fee Structure</span>
+        <span class="quick-pill">📝 Revaluation</span>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # Chat Interface Columns
     c_mic, c_input = st.columns([1, 10], gap="small")
     
     with c_mic:
-        st.write("") 
+        st.write("") # Alignment push
         audio = mic_recorder(start_prompt="🎙️", stop_prompt="⏹️", key='recorder', format="webm", just_once=True)
         
     with c_input:
@@ -275,11 +299,11 @@ if selected == "Student Chat":
             except: pass
             
         default_val = voice_text if voice_text else ""
-        user_question = st.text_input("Search", value=default_val, placeholder="Ex: When are the exams?", label_visibility="collapsed")
+        user_question = st.text_input("Search", value=default_val, placeholder="Ask anything about the campus...", label_visibility="collapsed")
 
-    # --- ANSWER SECTION ---
+    # --- AI ANSWER SECTION ---
     if user_question:
-        with st.spinner("🧠 Analyzing..."):
+        with st.spinner("🧠 Processing query..."):
             try:
                 embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
                 if os.path.exists("faiss_index"):
@@ -288,11 +312,10 @@ if selected == "Student Chat":
                     chain = get_conversational_chain()
                     response = chain.invoke({"input_documents": docs, "question": user_question}, return_only_outputs=True)
                     
-                    # VISIBILITY FIX: .answer-box uses explicit white color
                     st.markdown(f"""
                     <div class="answer-box">
-                        <h3 style="color: #00C853; margin: 0;">🤖 Answer:</h3>
-                        <hr style="border-color: rgba(255,255,255,0.2);">
+                        <h3 style="color: #00C853; margin: 0;">🤖 Answer</h3>
+                        <hr style="border-color: rgba(255,255,255,0.2); margin: 15px 0;">
                         <p style="font-size: 18px; line-height: 1.6; color: white;">{response['output_text']}</p>
                     </div>
                     """, unsafe_allow_html=True)
@@ -302,12 +325,12 @@ if selected == "Student Chat":
                 st.error(f"Error: {e}")
 
 # ==========================================
-# PAGE 2: ADMIN PORTAL
+# PAGE 2: ADMIN PORTAL (Touch Nothing!)
 # ==========================================
 if selected == "Admin Portal":
     c1, c2 = st.columns([1, 3])
     with c1:
-        if lottie_upload: st_lottie(lottie_upload, height=150)
+        if lottie_admin: st_lottie(lottie_admin, height=150)
     with c2:
         st.title("Admin Upload")
         st.write("Securely upload circulars.")
