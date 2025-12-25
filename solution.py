@@ -9,8 +9,8 @@ import os
 import time
 
 # --- HYBRID AI IMPORTS ---
-from langchain_openai import ChatOpenAI, OpenAIEmbeddings  # SPEED & BRAINS
-import google.generativeai as genai                       # GOOGLE EARS (AUDIO)
+from langchain_openai import ChatOpenAI, OpenAIEmbeddings
+import google.generativeai as genai
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import FAISS
 from langchain.chains.question_answering import load_qa_chain
@@ -27,11 +27,9 @@ from googleapiclient.http import MediaFileUpload
 st.set_page_config(page_title="CampusMind AI", page_icon="🎓", layout="wide")
 
 try:
-    # 1. OpenAI Key (For Speed & Reasoning)
     if "OPENAI_API_KEY" in st.secrets:
         os.environ["OPENAI_API_KEY"] = st.secrets["OPENAI_API_KEY"]
 
-    # 2. Google Key (For Gemini Audio & Drive)
     if "GOOGLE_API_KEY" in st.secrets:
         os.environ["GOOGLE_API_KEY"] = st.secrets["GOOGLE_API_KEY"]
         genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
@@ -84,10 +82,10 @@ def update_global_files_from_drive():
 if not get_global_memory().files:
     update_global_files_from_drive()
 
-# --- GOOGLE AI FEATURE: GEMINI AUDIO TRANSCRIPTION ---
+# --- GEMINI AUDIO TRANSCRIPTION ---
 def transcribe_audio_gemini(audio_bytes):
     try:
-        # Gemini 1.5 Flash is FAST and FREE for audio
+        # We can use Flash now because we upgraded google-generativeai!
         model = genai.GenerativeModel("gemini-1.5-flash")
         response = model.generate_content([
             "Transcribe this audio exactly. Output only the text.",
@@ -97,11 +95,11 @@ def transcribe_audio_gemini(audio_bytes):
     except:
         return ""
 
-# --- OPENAI BACKEND (FAST & ROBUST) ---
-INDEX_NAME = "faiss_index_hybrid"
+# --- OPENAI BACKEND ---
+INDEX_NAME = "faiss_index_hybrid_v1"
 
 def get_vector_store(text_chunks):
-    # OpenAI Embeddings = Fast, No strict 429 errors
+    # Fast OpenAI Embeddings
     embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
     
     if os.path.exists(INDEX_NAME):
@@ -122,7 +120,7 @@ def get_conversational_chain():
     Question: {question}
     Answer:
     """
-    # OpenAI GPT-4o (or 3.5) = Smart & Fast
+    # Fast GPT-4o
     model = ChatOpenAI(model="gpt-4o-mini", temperature=0.3)
     prompt = PromptTemplate(template=prompt_template, input_variables=["context", "question"])
     return load_qa_chain(model, chain_type="stuff", prompt=prompt)
@@ -143,7 +141,7 @@ with st.sidebar:
     st.title("CampusMind")
     selected = option_menu("Nav", ["Student Chat", "Admin Portal"], icons=['chat', 'cloud'], default_index=0)
     st.markdown("---")
-    st.caption("⚡ Powered by: OpenAI + Google Gemini")
+    st.caption("⚡ Hybrid: OpenAI + Gemini Audio")
 
 # ==========================================
 # PAGE 1: CHAT
@@ -161,13 +159,11 @@ if selected == "Student Chat":
 
     c1, c2 = st.columns([1, 8])
     with c1:
-        # Mic Recorder
         audio = mic_recorder(start_prompt="🎙️", stop_prompt="⏹️", key='recorder')
     with c2:
         voice_text = ""
         if audio:
-            with st.spinner("Processing Audio with Gemini 1.5..."):
-                # GOOGLE AI FEATURE HERE
+            with st.spinner("Processing Audio with Gemini..."):
                 voice_text = transcribe_audio_gemini(audio['bytes'])
         user_question = st.text_input("Ask a question", value=voice_text)
 
@@ -195,12 +191,11 @@ if selected == "Admin Portal":
     
     if st.button("Upload"):
         if pdf_docs:
-            with st.spinner("Processing High-Speed Vectors..."):
+            with st.spinner("Processing..."):
                 raw_text = ""
                 for pdf in pdf_docs:
                     with pdfplumber.open(pdf) as f:
                         for page in f.pages: raw_text += page.extract_text()
-                    # GOOGLE CLOUD FEATURE HERE
                     upload_to_drive(pdf.name, pdf.name)
                 
                 get_global_memory().files = [{"name": p.name} for p in pdf_docs] + get_global_memory().files
@@ -208,9 +203,8 @@ if selected == "Admin Portal":
                 text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
                 chunks = text_splitter.split_text(raw_text)
                 
-                # Fast OpenAI Vectorization (No Batching Delays!)
                 get_vector_store(chunks)
                 
-                st.success("Knowledge Base Updated Successfully!")
+                st.success("Knowledge Base Updated!")
                 time.sleep(1)
                 st.rerun()
