@@ -93,23 +93,49 @@ def transcribe_audio_gemini(audio_bytes):
     except Exception as e:
         return ""
 
-# --- INDEX HANDLING (VERSION 4 - SAFE MODE) ---
-INDEX_NAME = "faiss_index_v4"
+# --- INDEX HANDLING (VERSION 5 - BATCHED) ---
+INDEX_NAME = "faiss_index_v5"
 
-def get_vector_store(text_chunks):
-    # USE THE SAFEST EMBEDDING MODEL AVAILABLE
-    embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
+def get_vector_store_batched(text_chunks):
+    # Use the better model
+    embeddings = GoogleGenerativeAIEmbeddings(model="models/text-embedding-004")
     
-    if os.path.exists(INDEX_NAME):
-        try:
-            vector_store = FAISS.load_local(INDEX_NAME, embeddings, allow_dangerous_deserialization=True)
-            vector_store.add_texts(text_chunks) 
-        except:
-            vector_store = FAISS.from_texts(text_chunks, embedding=embeddings)
-    else:
-        vector_store = FAISS.from_texts(text_chunks, embedding=embeddings)
+    # BATCHING LOGIC TO PREVENT 429 ERRORS
+    batch_size = 20
+    total_chunks = len(text_chunks)
+    progress_text = "Vectorizing document... Please wait."
+    my_bar = st.progress(0, text=progress_text)
     
+    vector_store = None
+    
+    # Process in batches
+    for i in range(0, total_chunks, batch_size):
+        batch = text_chunks[i : i + batch_size]
+        
+        # Create or Add to Vector Store
+        if vector_store is None:
+            # First batch creates the store
+            if os.path.exists(INDEX_NAME):
+                try:
+                    vector_store = FAISS.load_local(INDEX_NAME, embeddings, allow_dangerous_deserialization=True)
+                    vector_store.add_texts(batch)
+                except:
+                    vector_store = FAISS.from_texts(batch, embedding=embeddings)
+            else:
+                vector_store = FAISS.from_texts(batch, embedding=embeddings)
+        else:
+            # Subsequent batches just add text
+            vector_store.add_texts(batch)
+        
+        # Update Progress Bar
+        percent_complete = min(1.0, (i + batch_size) / total_chunks)
+        my_bar.progress(percent_complete, text=f"Vectorizing... {int(percent_complete*100)}%")
+        
+        # CRITICAL: Wait to respect Rate Limits
+        time.sleep(1.5)
+        
     vector_store.save_local(INDEX_NAME)
+    my_bar.empty()
 
 def get_conversational_chain():
     prompt_template = """
@@ -118,8 +144,8 @@ def get_conversational_chain():
     Question: {question}
     Answer:
     """
-    # USE "gemini-pro" - IT IS THE MOST STABLE AND WIDELY SUPPORTED
-    model = ChatGoogleGenerativeAI(model="gemini-pro", temperature=0.3)
+    # Use gemini-1.5-flash for speed and context
+    model = ChatGoogleGenerativeAI(model="gemini-1.5-flash", temperature=0.3)
     prompt = PromptTemplate(template=prompt_template, input_variables=["context", "question"])
     return load_qa_chain(model, chain_type="stuff", prompt=prompt)
 
@@ -168,8 +194,7 @@ if selected == "Student Chat":
     if user_question:
         with st.spinner("Thinking..."):
             try:
-                # USE SAFE EMBEDDINGS HERE TOO
-                embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
+                embeddings = GoogleGenerativeAIEmbeddings(model="models/text-embedding-004")
                 if os.path.exists(INDEX_NAME):
                     new_db = FAISS.load_local(INDEX_NAME, embeddings, allow_dangerous_deserialization=True)
                     docs = new_db.similarity_search(user_question)
@@ -201,10 +226,13 @@ if selected == "Admin Portal":
                 # Update memory
                 get_global_memory().files = [{"name": p.name} for p in pdf_docs] + get_global_memory().files
                 
-                # Update Vector DB
+                # Update Vector DB with BATCHING
                 text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
                 chunks = text_splitter.split_text(raw_text)
-                get_vector_store(chunks)
-                st.success("Knowledge Base Updated!")
+                
+                # CALL THE NEW BATCHED FUNCTION
+                get_vector_store_batched(chunks)
+                
+                st.success("Knowledge Base Updated Successfully!")
                 time.sleep(1)
                 st.rerun()
