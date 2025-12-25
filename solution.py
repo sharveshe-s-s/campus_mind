@@ -12,7 +12,7 @@ import time
 from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
 import google.generativeai as genai
 
-# --- FIX: NEW IMPORT PATH FOR TEXT SPLITTER ---
+# --- FIX: CORRECT IMPORT FOR TEXT SPLITTER ---
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 from langchain_community.vectorstores import FAISS
