@@ -30,7 +30,6 @@ from openai import OpenAI
 def force_dark_mode():
     """
     Writes a config file to force Streamlit into Dark Mode.
-    This ensures a consistent look and feel.
     """
     config_dir = ".streamlit"
     config_path = os.path.join(config_dir, "config.toml")
@@ -67,10 +66,32 @@ except FileNotFoundError:
     st.error("🚨 Secrets file not found!")
 
 # ==========================================
-# 2. HACKATHON WINNING CSS
+# 2. HACKATHON WINNING CSS (UPDATED WITH ANIMATIONS)
 # ==========================================
 st.markdown("""
 <style>
+    /* --- ANIMATION: ENTRY SLIDE UP --- */
+    .block-container {
+        animation: slideUpFade 0.8s ease-out;
+    }
+    @keyframes slideUpFade {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* --- ANIMATION: SHIMMER TEXT FOR TITLE --- */
+    .shimmer-text {
+        font-weight: bold;
+        background: linear-gradient(45deg, #ffffff, #a8c0ff, #ffffff);
+        background-size: 200% auto;
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        animation: shine 3s linear infinite;
+    }
+    @keyframes shine {
+        to { background-position: 200% center; }
+    }
+
     /* 1. MAIN BACKGROUND: Deep Cyberpunk Gradient */
     .stApp {
         background: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%);
@@ -82,20 +103,25 @@ st.markdown("""
         border-right: 1px solid rgba(255, 255, 255, 0.1);
     }
 
-    /* 3. INPUT BOX - THE "HIGH VISIBILITY" FIX */
-    /* We make the input box WHITE with BLACK text. Cannot miss it. */
+    /* 3. INPUT BOX - HIGH VISIBILITY + NEW HOVER GLOW */
     .stTextInput input {
         background-color: #ffffff !important;
         color: #000000 !important;
         border-radius: 12px;
-        padding: 12px 12px 12px 50px; /* Add padding for the mic icon */
+        padding: 12px 12px 12px 50px; 
         font-size: 16px;
         border: 2px solid transparent;
         box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    /* Hover Effect added here */
+    .stTextInput input:hover {
+        transform: scale(1.01);
     }
     .stTextInput input:focus {
         border-color: #00C853 !important;
         box-shadow: 0 0 15px rgba(0, 200, 83, 0.5);
+        transform: scale(1.01);
     }
 
     /* 4. MIC BUTTON (Integrated look) */
@@ -104,27 +130,29 @@ st.markdown("""
         width: 40px;
         height: 40px;
         padding: 0;
-        background: transparent; /* Transparent background */
-        border: none; /* No border */
+        background: transparent;
+        border: none;
         color: #00C853;
         font-size: 20px;
         transition: all 0.3s ease;
-        position: relative; /* For positioning */
-        left: 5px; /* Adjust position */
+        position: relative;
+        left: 5px;
         top: 2px;
-        z-index: 1; /* Ensure it's above the input */
+        z-index: 1;
     }
     div[data-testid="stButton"] button:hover {
         color: #009624;
         transform: scale(1.1);
     }
 
-    /* 5. PROCESS BUTTON (Pill Shape Override) */
-    /* This specifically targets the "Process & Upload" button */
+    /* 5. PROCESS BUTTON (FIXED ALIGNMENT) */
+    /* Added white-space: nowrap to prevent squashing */
     .stButton button.process-btn {
-        border-radius: 30px !important; /* Rounded rectangle */
+        border-radius: 30px !important;
         width: auto !important;
         height: auto !important;
+        white-space: nowrap !important; /* <--- KEY FIX */
+        min-width: 160px;               /* <--- KEY FIX */
         padding: 10px 30px !important;
         background: linear-gradient(90deg, #00C853 0%, #009624 100%);
         color: white;
@@ -148,13 +176,13 @@ st.markdown("""
     }
 
     /* 7. AI ANSWER BOX */
-    .answer-box {
+    .answer-box-container {
         background: rgba(0, 0, 0, 0.6);
         border-left: 6px solid #00C853;
         padding: 25px;
         border-radius: 12px;
         margin-top: 20px;
-        color: #ffffff !important; /* Force White Text */
+        color: #ffffff !important;
     }
 
     /* 8. HIDE STREAMLIT UI ELEMENTS */
@@ -171,6 +199,12 @@ def load_lottieurl(url):
         r = requests.get(url, timeout=3)
         return r.json() if r.status_code == 200 else None
     except: return None
+
+def stream_text(text):
+    """Yields text character by character/word by word to simulate typing."""
+    for word in text.split(" "):
+        yield word + " "
+        time.sleep(0.05) # Adjust typing speed here
 
 def upload_to_drive(file_path, file_name):
     try:
@@ -212,9 +246,7 @@ def get_conversational_chain():
     return load_qa_chain(model, chain_type="stuff", prompt=prompt)
 
 # ASSETS
-# New, more impressive AI animation for Student Chat
 lottie_student_ai = load_lottieurl("https://lottie.host/99977635-960c-4432-9987-440077149909/99977635-960c-4432-9987-440077149909.json")
-# Admin Laptop Animation
 lottie_admin = load_lottieurl("https://assets2.lottiefiles.com/packages/lf20_w51pcehl.json")
 
 # ==========================================
@@ -242,16 +274,15 @@ with st.sidebar:
 # ==========================================
 if selected == "Student Chat":
     
-    # --- HERO HEADER WITH ANIMATION ---
-    # Split layout: Animation on left, Text on right
+    # --- HERO HEADER WITH ANIMATION & SHIMMER TITLE ---
     col1, col2 = st.columns([1, 2])
     with col1:
         if lottie_student_ai: 
             st_lottie(lottie_student_ai, height=200, key="hero_anim")
     with col2:
-        # Vertically center the text
         st.markdown("<div style='display: flex; flex-direction: column; justify-content: center; height: 200px;'>", unsafe_allow_html=True)
-        st.markdown("<h1 style='font-size: 48px; margin-bottom: 0;'>CampusMind AI</h1>", unsafe_allow_html=True)
+        # APPLIED THE SHIMMER CLASS HERE
+        st.markdown("<h1 class='shimmer-text' style='font-size: 48px; margin-bottom: 0;'>CampusMind AI</h1>", unsafe_allow_html=True)
         st.markdown("<p style='font-size: 18px; opacity: 0.8;'>Your 24/7 Smart Campus Assistant</p>", unsafe_allow_html=True)
         st.markdown("</div>", unsafe_allow_html=True)
 
@@ -279,20 +310,16 @@ if selected == "Student Chat":
 
     st.markdown("---")
 
-    # --- CHAT INTERFACE (Perfect Alignment) ---
+    # --- CHAT INTERFACE ---
     st.markdown("##### 💬 Ask Anything")
     
-    # Use a container to visually group the mic and input
     with st.container():
-        # Use columns to place them side-by-side with minimal gap
         c_mic, c_input = st.columns([1, 11])
         
         with c_mic:
-            # The Mic Button (CSS makes it look integrated)
             audio = mic_recorder(start_prompt="🎙️", stop_prompt="⏹️", key='recorder', format="webm", just_once=True)
             
         with c_input:
-            # Voice Processing
             voice_text = ""
             if audio:
                 with st.spinner("Processing voice..."):
@@ -304,11 +331,10 @@ if selected == "Student Chat":
                         voice_text = transcript.text
                     except: pass
             
-            # The Input Box (CSS adds padding for the mic)
             default_val = voice_text if voice_text else ""
             user_question = st.text_input("Search", value=default_val, placeholder="Ex: When are the exams?", label_visibility="collapsed")
 
-    # --- ANSWER SECTION ---
+    # --- ANSWER SECTION WITH TYPING EFFECT ---
     if user_question:
         with st.spinner("🧠 Analyzing..."):
             try:
@@ -319,14 +345,21 @@ if selected == "Student Chat":
                     chain = get_conversational_chain()
                     response = chain.invoke({"input_documents": docs, "question": user_question}, return_only_outputs=True)
                     
-                    # VISIBILITY FIX: .answer-box uses explicit white color
-                    st.markdown(f"""
-                    <div class="answer-box">
+                    full_response = response['output_text']
+
+                    # --- UPDATED DISPLAY LOGIC ---
+                    # We create a container that simulates the 'Answer Box' style
+                    st.markdown("""
+                        <div class="answer-box-container">
                         <h3 style="color: #00C853; margin: 0;">🤖 Answer:</h3>
                         <hr style="border-color: rgba(255,255,255,0.2); margin: 15px 0;">
-                        <p style="font-size: 18px; line-height: 1.6; color: white;">{response['output_text']}</p>
-                    </div>
+                        </div>
                     """, unsafe_allow_html=True)
+                    
+                    # We stream the text OUTSIDE the HTML div but it will look visually connected
+                    # This enables the typing effect
+                    st.write_stream(stream_text(full_response))
+                    
                 else:
                     st.warning("⚠️ Knowledge Base Empty. Please upload circulars in Admin Portal.")
             except Exception as e:
@@ -347,7 +380,8 @@ if selected == "Admin Portal":
     pdf_docs = st.file_uploader("Select PDF Files", accept_multiple_files=True, type=['pdf'])
     
     st.write("")
-    # We add a custom class 'process-btn' to this button for styling
+    
+    # Process Button with Class injection
     if st.button("Process & Upload", key="process_btn", help="Click to process and upload documents"):
         if pdf_docs:
             with st.status("Processing...", expanded=True):
@@ -373,7 +407,7 @@ if selected == "Admin Portal":
             st.warning("Please select at least one PDF file.")
     st.markdown('</div>', unsafe_allow_html=True)
 
-    # Inject custom CSS class to the button via JavaScript for precise targeting
+    # Inject custom CSS class for button targeting
     st.markdown("""
     <script>
         const buttons = window.parent.document.querySelectorAll('button');
@@ -384,7 +418,6 @@ if selected == "Admin Portal":
         });
     </script>
     """, unsafe_allow_html=True)
-
 
 # ==========================================
 # PAGE 3: ABOUT
