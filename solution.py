@@ -85,7 +85,6 @@ if not get_global_memory().files:
 # --- GEMINI AUDIO TRANSCRIPTION ---
 def transcribe_audio_gemini(audio_bytes):
     try:
-        # We can use Flash now because we upgraded google-generativeai!
         model = genai.GenerativeModel("gemini-1.5-flash")
         response = model.generate_content([
             "Transcribe this audio exactly. Output only the text.",
@@ -96,10 +95,9 @@ def transcribe_audio_gemini(audio_bytes):
         return ""
 
 # --- OPENAI BACKEND ---
-INDEX_NAME = "faiss_index_hybrid_v1"
+INDEX_NAME = "faiss_index_hybrid_v2"
 
 def get_vector_store(text_chunks):
-    # Fast OpenAI Embeddings
     embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
     
     if os.path.exists(INDEX_NAME):
@@ -114,13 +112,19 @@ def get_vector_store(text_chunks):
     vector_store.save_local(INDEX_NAME)
 
 def get_conversational_chain():
+    # CHANGED PROMPT TO BE MORE AGGRESSIVE
     prompt_template = """
-    Answer the question as detailed as possible from the provided context.
-    Context: {context}
+    You are an intelligent campus assistant. 
+    Review the Context below carefully. It contains extracted text from PDF circulars.
+    If you see a table or list, try to connect the headers with the values.
+    
+    Context:
+    {context}
+    
     Question: {question}
-    Answer:
+    
+    Answer (If you can't find it, say "I can't find specific details in the uploaded documents"):
     """
-    # Fast GPT-4o
     model = ChatOpenAI(model="gpt-4o-mini", temperature=0.3)
     prompt = PromptTemplate(template=prompt_template, input_variables=["context", "question"])
     return load_qa_chain(model, chain_type="stuff", prompt=prompt)
@@ -173,10 +177,19 @@ if selected == "Student Chat":
                 embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
                 if os.path.exists(INDEX_NAME):
                     new_db = FAISS.load_local(INDEX_NAME, embeddings, allow_dangerous_deserialization=True)
-                    docs = new_db.similarity_search(user_question)
+                    
+                    # FIX: SEARCH FOR MORE CHUNKS (k=10) TO CATCH SPLIT TABLES
+                    docs = new_db.similarity_search(user_question, k=10)
+                    
                     chain = get_conversational_chain()
                     res = chain.invoke({"input_documents": docs, "question": user_question}, return_only_outputs=True)
                     st.success(res['output_text'])
+                    
+                    # DEBUGGER: SHOW WHAT THE AI SAW
+                    with st.expander("🔍 Debug: See what AI read"):
+                        for i, doc in enumerate(docs):
+                            st.caption(f"**Chunk {i+1}:**")
+                            st.text(doc.page_content[:200] + "...") # Show first 200 chars
                 else:
                     st.warning("⚠️ No circulars uploaded yet! Go to Admin Portal.")
             except Exception as e:
@@ -195,7 +208,11 @@ if selected == "Admin Portal":
                 raw_text = ""
                 for pdf in pdf_docs:
                     with pdfplumber.open(pdf) as f:
-                        for page in f.pages: raw_text += page.extract_text()
+                        for page in f.pages: 
+                            # FIX: BETTER TABLE EXTRACTION
+                            text = page.extract_text(layout=True) # Try to preserve layout
+                            if text: raw_text += text + "\n\n"
+                            
                     upload_to_drive(pdf.name, pdf.name)
                 
                 get_global_memory().files = [{"name": p.name} for p in pdf_docs] + get_global_memory().files
