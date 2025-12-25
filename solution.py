@@ -163,7 +163,6 @@ st.markdown("""
     }
 
     /* --- KEY FIX: BUTTON SQUASHING --- */
-    /* Applies to ALL buttons to prevent wrapping, specific targeting for the process button */
     .stButton button {
         white-space: nowrap !important; /* Force text to one line */
         width: auto !important;
@@ -316,8 +315,9 @@ if selected == "Student Chat":
         if lottie_student_ai:
             st_lottie(lottie_student_ai, height=220, key="hero_anim")
         else:
-            # Fallback Static Futuristic Image
-            st.image("https://img.freepik.com/premium-photo/futuristic-robot-artificial-intelligence-concept_31965-3856.jpg", width=220)
+            # --- FIX 1: Reliable Fallback Image ---
+            # Using a high-quality, reliable image from Unsplash
+            st.image("https://images.unsplash.com/photo-1635070041043-c9b3830b1e5e?q=80&w=1000&auto=format&fit=crop", width=220)
 
     with col2:
         st.markdown("<div style='display:flex;flex-direction:column;justify-content:center;height:220px;'>", unsafe_allow_html=True)
@@ -398,16 +398,25 @@ if selected == "Student Chat":
                     st.session_state.chat_history.append({"role": "User", "text": user_question})
                     st.session_state.chat_history.append({"role": "AI", "text": full_response})
 
+                    # --- FIX 2: Answer Box Alignment ---
+                    # Open the container div
+                    st.markdown('<div class="answer-box-container">', unsafe_allow_html=True)
+                    
+                    # Place header inside
                     st.markdown("""
-                        <div class="answer-box-container">
-                            <div class="answer-title">
-                                <span class="icon">🤖</span><span>CampusMind Answer</span>
-                            </div>
-                            <div class="answer-sub">Context-aware · From your uploaded circulars</div>
-                            <hr style="border-color: rgba(255,255,255,0.18); margin: 12px 0 4px 0;">
+                        <div class="answer-title">
+                            <span class="icon">🤖</span><span>CampusMind Answer</span>
                         </div>
+                        <div class="answer-sub">Context-aware · From your uploaded circulars</div>
+                        <hr style="border-color: rgba(255,255,255,0.18); margin: 12px 0 4px 0;">
                     """, unsafe_allow_html=True)
+                    
+                    # Stream the text inside
                     st.write_stream(stream_text(full_response))
+                    
+                    # Close the container div
+                    st.markdown('</div>', unsafe_allow_html=True)
+                    
                 else:
                     st.warning("⚠️ Knowledge base empty. Please upload circulars in the Admin Portal to unlock campus‑aware answers.")
             except Exception as e:
