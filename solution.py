@@ -67,12 +67,10 @@ st.markdown("""
         font-family: 'Inter', sans-serif;
     }
 
-    /* CUSTOM SCROLLBAR */
     ::-webkit-scrollbar { width: 10px; }
     ::-webkit-scrollbar-track { background: #050913; }
     ::-webkit-scrollbar-thumb { background: #00C853; border-radius: 10px; }
 
-    /* LAYOUT */
     .block-container {
         padding-top: 2rem !important;
         padding-bottom: 3rem !important;
@@ -90,7 +88,6 @@ st.markdown("""
     }
     [data-testid="stMain"] { background: transparent !important; }
 
-    /* SIDEBAR */
     section[data-testid="stSidebar"] {
         background: rgba(5, 9, 19, 0.95);
         border-right: 1px solid rgba(255, 255, 255, 0.05);
@@ -99,7 +96,6 @@ st.markdown("""
     .sidebar-title { font-weight: 800; font-size: 24px; color: #fff; letter-spacing: 0.05em; }
     .sidebar-subtitle { font-size: 12px; color: rgba(255,255,255,0.6); letter-spacing: 0.1em; text-transform: uppercase; }
 
-    /* SHIMMER TITLE */
     .shimmer-text {
         font-weight: 800;
         background: linear-gradient(120deg, #ffffff 30%, #00ffc3 50%, #00C853 70%);
@@ -120,7 +116,6 @@ st.markdown("""
         text-transform: uppercase; letter-spacing: 0.1em; color: #00ffc3; margin-bottom: 16px;
     }
 
-    /* NAVIGATION */
     .nav-link {
         border-radius: 8px !important; margin: 4px 0 !important;
         font-size: 15px !important; font-weight: 500 !important; color: #c0c7df !important;
@@ -132,7 +127,6 @@ st.markdown("""
         color: #ffffff !important; box-shadow: 0 4px 15px rgba(0, 200, 83, 0.4);
     }
 
-    /* INPUTS */
     .stTextInput input {
         background: rgba(255, 255, 255, 0.05) !important; color: #fff !important;
         border-radius: 12px; padding: 16px 20px 16px 50px; font-size: 16px;
@@ -143,7 +137,19 @@ st.markdown("""
         box-shadow: 0 0 0 3px rgba(0, 200, 83, 0.25);
     }
 
-    /* MIC BUTTON */
+    .stTextInput > div > div {
+        position: relative;
+    }
+    .stTextInput > div > div:before {
+        content: "🔍";
+        position: absolute;
+        left: 14px;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 18px;
+        opacity: 0.7;
+    }
+
     div[data-testid="stButton"] button {
         border-radius: 12px !important; width: 54px; height: 54px;
         background: linear-gradient(135deg, #00C853, #009624);
@@ -152,11 +158,10 @@ st.markdown("""
     }
     div[data-testid="stButton"] button:hover { transform: translateY(-2px); }
 
-    /* PROCESS BUTTON (Strict Width Fix) */
     .stButton button.process-btn {
         white-space: nowrap !important;
         width: auto !important;
-        min-width: 250px !important; /* Forces it to be wide enough */
+        min-width: 250px !important;
         display: inline-flex !important;
         align-items: center !important;
         justify-content: center !important;
@@ -168,15 +173,13 @@ st.markdown("""
     }
     .stButton button.process-btn:hover { transform: translateY(-3px); box-shadow: 0 12px 30px rgba(0, 200, 83, 0.4); }
 
-    /* CARDS */
     .glass-card {
         background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(25px);
         border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.08); padding: 24px;
-        transition: transform 0.2s ease;
+        transition: transform 0.2s ease, border-color 0.2s ease;
     }
     .glass-card:hover { transform: translateY(-5px); border-color: rgba(0, 200, 83, 0.4); }
 
-    /* ANSWER BOX (Self-contained) */
     .answer-box-container {
         background: rgba(0, 200, 83, 0.04);
         border-radius: 16px;
@@ -190,15 +193,18 @@ st.markdown("""
     .answer-title { color: #00ffc3; font-size: 20px; font-weight: 800; display: flex; align-items: center; gap: 12px; }
     .answer-content { font-size: 17px; line-height: 1.7; margin-top: 15px; color: #eef2f6; }
 
-    /* HISTORY */
     .history-card {
         background: rgba(255, 255, 255, 0.02); border-radius: 16px;
         border: 1px solid rgba(255, 255, 255, 0.08); padding: 16px;
         max-height: 350px; overflow-y: auto;
     }
     .history-item {
-        padding: 12px 16px; background: rgba(255, 255, 255, 0.04);
-        border-radius: 10px; margin-bottom: 10px; font-size: 14px;
+        padding: 8px 12px; background: rgba(255, 255, 255, 0.04);
+        border-radius: 10px; margin-bottom: 8px; font-size: 13px;
+    }
+    .history-item span.label {
+        font-size: 11px; font-weight: 700; text-transform: uppercase;
+        letter-spacing: 0.08em; color: #00ffc3;
     }
     
     .chip {
@@ -206,6 +212,7 @@ st.markdown("""
         border: 1px solid rgba(255,255,255,0.1); font-size: 13px; color: #fff;
         gap: 8px; background: rgba(255,255,255,0.05);
     }
+
     #MainMenu {visibility: hidden;} footer {visibility: hidden;}
 </style>
 """, unsafe_allow_html=True)
@@ -238,7 +245,14 @@ def get_recent_circulars():
         creds = service_account.Credentials.from_service_account_info(key_dict, scopes=['https://www.googleapis.com/auth/drive'])
         service = build('drive', 'v3', credentials=creds)
         query = f"'{DRIVE_FOLDER_ID}' in parents and trashed=false"
-        results = service.files().list(q=query, pageSize=3, fields="files(id, name, createdTime)", orderBy="createdTime desc", supportsAllDrives=True, includeItemsFromAllDrives=True).execute()
+        results = service.files().list(
+            q=query,
+            pageSize=3,
+            fields="files(id, name, createdTime)",
+            orderBy="createdTime desc",
+            supportsAllDrives=True,
+            includeItemsFromAllDrives=True
+        ).execute()
         return results.get('files', [])
     except: return []
 
@@ -259,11 +273,8 @@ def get_conversational_chain():
     return load_qa_chain(model, chain_type="stuff", prompt=prompt)
 
 # --- ASSETS ---
-# 1. Primary Lottie Animation (Verified Working)
 lottie_student_ai = load_lottieurl("https://lottie.host/60064060-2763-4393-8767-815716067708/3b336163-7407-4603-8003-160071663768.json")
-# 2. Fallback Static Image (High Res Futuristic AI)
 fallback_image = "https://img.freepik.com/premium-photo/futuristic-robot-artificial-intelligence-concept_31965-3856.jpg"
-
 lottie_admin = load_lottieurl("https://assets2.lottiefiles.com/packages/lf20_w51pcehl.json")
 
 # 3b. SESSION STATE
@@ -294,17 +305,15 @@ with st.sidebar:
     st.caption("v2.0 · Hackathon Edition")
 
 # ==========================================
-# PAGE 1: STUDENT CHAT
+# PAGE 1: STUDENT CHAT  (ONLY THIS SECTION CHANGED)
 # ==========================================
 if selected == "Student Chat":
     
-    # --- HERO SECTION (FIXED: LARGER IMAGE) ---
-    col1, col2 = st.columns([1, 1.2]) # Adjusted ratio to make image prominent
+    col1, col2 = st.columns([1, 1.2])
     
     with col1:
-        # LOGIC: Try Lottie, if None, show Image
         if lottie_student_ai:
-            st_lottie(lottie_student_ai, height=300, key="hero_anim") # Increased Height
+            st_lottie(lottie_student_ai, height=300, key="hero_anim")
         else:
             st.image(fallback_image, width=350)
             
@@ -317,7 +326,7 @@ if selected == "Student Chat":
 
     st.write("")
 
-    # --- RECENT UPDATES (FIXED: VISIBLE NAMES) ---
+    # RECENT CIRCULARS – FIXED NAME DISPLAY
     st.markdown("##### <span style='font-weight:700; color:#fff;'>Recent Circulars</span>", unsafe_allow_html=True)
     with st.spinner("Syncing latest updates..."):
         recent_files = get_recent_circulars()
@@ -326,13 +335,23 @@ if selected == "Student Chat":
         c1, c2, c3 = st.columns(3)
         cols = [c1, c2, c3]
         for i, file in enumerate(recent_files):
-            # Ensure name exists, fallback if not
-            fname = file.get('name', 'Untitled Circular')
+            fname = file.get("name") or "Untitled Circular"
+            created = file.get("createdTime", "")[:10]
             with cols[i]:
                 st.markdown(f"""
                 <div class="glass-card">
-                    <div style="color: #00ffc3; font-weight: 700; font-size: 13px; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 10px;">New Circular</div>
-                    <div style="font-size: 15px; font-weight: 600; color: #ffffff; line-height: 1.4; text-shadow: 0 1px 2px rgba(0,0,0,0.5);">{fname[:45]}...</div>
+                    <div style="color: #00ffc3; font-weight: 700; font-size: 13px; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 6px;">
+                        New Circular
+                    </div>
+                    <div style="font-size: 15px; font-weight: 600; color: #ffffff; line-height: 1.4; text-shadow: 0 1px 2px rgba(0,0,0,0.5);">
+                        {fname}
+                    </div>
+                    <div style="font-size: 12px; color: rgba(255,255,255,0.6); margin-top: 4px;">
+                        📅 {created}
+                    </div>
+                    <div style="font-size: 12px; color: rgba(255,255,255,0.7); margin-top: 8px;">
+                        🎧 Try: <i>“Explain the circular: {fname[:25]}...”</i>
+                    </div>
                 </div>
                 """, unsafe_allow_html=True)
     else:
@@ -340,7 +359,7 @@ if selected == "Student Chat":
 
     st.markdown("<br>", unsafe_allow_html=True)
 
-    # --- CHAT UI ---
+    # CHAT UI
     st.markdown("##### <span style='font-weight:700; color:#fff;'>💬 Ask Anything</span>", unsafe_allow_html=True)
     
     left_col, right_col = st.columns([7, 3])
@@ -362,7 +381,12 @@ if selected == "Student Chat":
                             voice_text = transcript.text
                         except: pass
                 default_val = voice_text if voice_text else ""
-                user_question = st.text_input("Search", value=default_val, placeholder="Ex: When are the exams? What does the latest circular say?", label_visibility="collapsed")
+                user_question = st.text_input(
+                    "Search",
+                    value=default_val,
+                    placeholder="Ex: When are the exams? What does the latest circular say?",
+                    label_visibility="collapsed"
+                )
 
     with right_col:
         st.markdown("<div class='history-card'>", unsafe_allow_html=True)
@@ -370,7 +394,10 @@ if selected == "Student Chat":
         if st.session_state.chat_history:
             for item in st.session_state.chat_history[-3:]:
                 label = "You" if item["role"] == "User" else "AI"
-                st.markdown(f"<div class='history-item'><span class='label'>{label}</span><br>{item['text']}</div>", unsafe_allow_html=True)
+                st.markdown(
+                    f"<div class='history-item'><span class='label'>{label}</span><br>{item['text']}</div>",
+                    unsafe_allow_html=True
+                )
         else:
             st.markdown("<div style='font-size:13px;color:rgba(255,255,255,0.6);'>Your conversation history will appear here.</div>", unsafe_allow_html=True)
         st.markdown("</div>", unsafe_allow_html=True)
@@ -390,19 +417,12 @@ if selected == "Student Chat":
                     st.session_state.chat_history.append({"role": "User", "text": user_question})
                     st.session_state.chat_history.append({"role": "AI", "text": full_response})
 
-                    # --- FINAL FIX: BOX CONTENT UPDATE ---
-                    # We create one placeholder
                     answer_placeholder = st.empty()
-                    
-                    # Accumulator for typing effect
                     accumulated_text = ""
                     words = full_response.split(" ")
                     
-                    # Loop to update the HTML content INSIDE the placeholder
                     for word in words:
                         accumulated_text += word + " "
-                        
-                        # Re-render the ENTIRE box with new text
                         answer_placeholder.markdown(f"""
                         <div class="answer-box-container">
                             <div class="answer-title">
@@ -413,9 +433,8 @@ if selected == "Student Chat":
                             <div class="answer-content">{accumulated_text}▌</div>
                         </div>
                         """, unsafe_allow_html=True)
-                        time.sleep(0.04) # Typing speed
+                        time.sleep(0.04)
                     
-                    # Final render without cursor
                     answer_placeholder.markdown(f"""
                     <div class="answer-box-container">
                         <div class="answer-title">
@@ -449,7 +468,6 @@ if selected == "Admin Portal":
     
     st.write("")
     
-    # Button with specific ID for styling
     if st.button("Process & Upload", key="process_btn", help="Click to process and upload documents"):
         if pdf_docs:
             with st.status("Processing...", expanded=True):
@@ -473,7 +491,6 @@ if selected == "Admin Portal":
             st.warning("Please select at least one PDF file.")
     st.markdown('</div>', unsafe_allow_html=True)
 
-    # Inject Class
     st.markdown("""
     <script>
         const buttons = window.parent.document.querySelectorAll('button');
