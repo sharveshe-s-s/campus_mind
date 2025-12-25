@@ -51,9 +51,6 @@ force_dark_mode()
 # ==========================================
 st.set_page_config(page_title="CampusMind AI", page_icon="🎓", layout="wide")
 
-# --- INITIALIZE SESSION STATE ---
-if "chat_history" not in st.session_state: st.session_state.chat_history = []
-
 try:
     if "OPENAI_API_KEY" in st.secrets: os.environ["OPENAI_API_KEY"] = st.secrets["OPENAI_API_KEY"]
     DRIVE_FOLDER_ID = '1IRAXoxny14JvI6UbJ1zPyUduwlzm5Egm' 
@@ -257,29 +254,38 @@ def upload_to_drive(file_path, file_name):
         return file.get('id')
     except Exception as e: return f"Error: {e}"
 
-# --- FIX: NO CACHING, PURE REAL-TIME FETCH ---
-def get_recent_circulars():
-    """
-    Fetches the latest 3 circulars directly from Drive.
-    No caching ensures all users see new files instantly (after Drive indexes them).
-    """
+# --- GLOBAL SHARED MEMORY FOR CIRCULARS ---
+class GlobalMemory:
+    def __init__(self):
+        self.files = []
+        self.last_updated = 0
+
+@st.cache_resource
+def get_global_memory():
+    return GlobalMemory()
+
+def update_global_files_from_drive():
+    """Fetches from drive and updates global memory."""
+    memory = get_global_memory()
     try:
         if "gcp_service_account" in st.secrets:
             key_dict = st.secrets["gcp_service_account"]
             creds = service_account.Credentials.from_service_account_info(key_dict, scopes=['https://www.googleapis.com/auth/drive'])
             service = build('drive', 'v3', credentials=creds)
             query = f"'{DRIVE_FOLDER_ID}' in parents and trashed=false"
-            # Order by createdTime descending to get the newest items
             results = service.files().list(q=query, pageSize=3, fields="files(id, name, createdTime)", orderBy="createdTime desc", supportsAllDrives=True, includeItemsFromAllDrives=True).execute()
-            return results.get('files', [])
-    except: 
-        return []
-    return []
+            memory.files = results.get('files', [])
+            memory.last_updated = time.time()
+    except:
+        pass
+
+# Initialize memory on startup if empty
+if not get_global_memory().files:
+    update_global_files_from_drive()
 
 # --- INTELLIGENT MEMORY MERGING ---
 def get_vector_store(text_chunks):
     embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
-    
     if os.path.exists("faiss_index"):
         try:
             st.write("🔄 Found existing knowledge base. Merging new data...")
@@ -292,7 +298,6 @@ def get_vector_store(text_chunks):
     else:
         st.write("🆕 Creating new knowledge base.")
         vector_store = FAISS.from_texts(text_chunks, embedding=embeddings)
-    
     vector_store.save_local("faiss_index")
 
 def get_conversational_chain():
@@ -307,6 +312,9 @@ def get_conversational_chain():
     return load_qa_chain(model, chain_type="stuff", prompt=prompt)
 
 lottie_admin = load_lottieurl("https://assets2.lottiefiles.com/packages/lf20_w51pcehl.json")
+
+# 3b. SESSION STATE INIT
+if "chat_history" not in st.session_state: st.session_state.chat_history = []
 
 # ==========================================
 # 4. SIDEBAR
@@ -348,16 +356,14 @@ if selected == "Student Chat":
 
     st.markdown("##### <span style='font-weight:700; color:#fff;'>Recent Circulars</span>", unsafe_allow_html=True)
     
-    # FETCH REAL-TIME DATA
-    # No caching used, so every page load fetches fresh data from Drive
-    with st.spinner("Syncing latest updates..."):
-        recent_files = get_recent_circulars()
+    # FETCH FROM SHARED GLOBAL MEMORY
+    memory = get_global_memory()
+    recent_files = memory.files
         
     if recent_files:
         c1, c2, c3 = st.columns(3)
         cols = [c1, c2, c3]
         for i, file in enumerate(recent_files):
-            # Ensure index doesn't exceed 3 columns
             if i < 3:
                 fname = file.get('name', 'Untitled Circular')
                 with cols[i]:
@@ -485,13 +491,14 @@ if selected == "Admin Portal":
                     upload_to_drive(pdf.name, pdf.name)
                     if os.path.exists(pdf.name): os.remove(pdf.name)
                 
-                # --- FIX: FORCED DELAY FOR GOOGLE INDEXING ---
-                # This ensures that when the page reloads, the file is likely available in the list
-                time.sleep(4) 
-
+                # --- FIX: UPDATE GLOBAL SHARED MEMORY INSTANTLY ---
+                memory = get_global_memory()
+                for pdf in pdf_docs:
+                    # Insert at the beginning so it's "Recent"
+                    memory.files.insert(0, {"name": pdf.name, "id": "local_upload"})
+                
                 text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
                 chunks = text_splitter.split_text(text)
-                
                 get_vector_store(chunks)
                 
                 st.success("✅ Knowledge base updated successfully!")
