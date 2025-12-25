@@ -8,11 +8,11 @@ import io
 import os
 import time
 
-# --- STANDARD IMPORTS ---
+# --- GOOGLE GENAI IMPORTS ---
+from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
+import google.generativeai as genai
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain_openai import OpenAIEmbeddings
 from langchain_community.vectorstores import FAISS
-from langchain_openai import ChatOpenAI
 from langchain.chains.question_answering import load_qa_chain
 from langchain_core.prompts import PromptTemplate 
 
@@ -20,9 +20,6 @@ from langchain_core.prompts import PromptTemplate
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
-
-# OpenAI Client
-from openai import OpenAI
 
 # ==========================================
 # 0. THEME ENGINE (Force Dark Mode)
@@ -51,8 +48,14 @@ force_dark_mode()
 # ==========================================
 st.set_page_config(page_title="CampusMind AI", page_icon="🎓", layout="wide")
 
+# --- INITIALIZE SESSION STATE ---
+if "chat_history" not in st.session_state: st.session_state.chat_history = []
+
 try:
-    if "OPENAI_API_KEY" in st.secrets: os.environ["OPENAI_API_KEY"] = st.secrets["OPENAI_API_KEY"]
+    if "GOOGLE_API_KEY" in st.secrets: 
+        os.environ["GOOGLE_API_KEY"] = st.secrets["GOOGLE_API_KEY"]
+        genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
+    
     DRIVE_FOLDER_ID = '1IRAXoxny14JvI6UbJ1zPyUduwlzm5Egm' 
 except FileNotFoundError: st.error("🚨 Secrets file not found!")
 
@@ -279,13 +282,31 @@ def update_global_files_from_drive():
     except:
         pass
 
-# Initialize memory on startup if empty
+# Initialize memory on startup
 if not get_global_memory().files:
     update_global_files_from_drive()
 
-# --- INTELLIGENT MEMORY MERGING ---
+# --- GOOGLE GEMINI FOR TRANSCRIPTION ---
+def transcribe_audio_gemini(audio_bytes):
+    try:
+        # Use Gemini 1.5 Flash which is natively multimodal (can hear!)
+        model = genai.GenerativeModel("gemini-1.5-flash")
+        response = model.generate_content([
+            "Please transcribe what is said in this audio. Output ONLY the transcription text, nothing else.",
+            {
+                "mime_type": "audio/webm",
+                "data": audio_bytes
+            }
+        ])
+        return response.text
+    except Exception as e:
+        return ""
+
+# --- INTELLIGENT MEMORY MERGING (GEMINI EMBEDDINGS) ---
 def get_vector_store(text_chunks):
-    embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
+    # Using Google's Text Embedding model
+    embeddings = GoogleGenerativeAIEmbeddings(model="models/text-embedding-004")
+    
     if os.path.exists("faiss_index"):
         try:
             st.write("🔄 Found existing knowledge base. Merging new data...")
@@ -298,6 +319,7 @@ def get_vector_store(text_chunks):
     else:
         st.write("🆕 Creating new knowledge base.")
         vector_store = FAISS.from_texts(text_chunks, embedding=embeddings)
+    
     vector_store.save_local("faiss_index")
 
 def get_conversational_chain():
@@ -307,14 +329,12 @@ def get_conversational_chain():
     Question: {question}
     Answer:
     """
-    model = ChatOpenAI(model="gpt-4o-mini", temperature=0.3)
+    # Using Gemini 1.5 Flash for Chat
+    model = ChatGoogleGenerativeAI(model="gemini-1.5-flash", temperature=0.3)
     prompt = PromptTemplate(template=prompt_template, input_variables=["context", "question"])
     return load_qa_chain(model, chain_type="stuff", prompt=prompt)
 
 lottie_admin = load_lottieurl("https://assets2.lottiefiles.com/packages/lf20_w51pcehl.json")
-
-# 3b. SESSION STATE INIT
-if "chat_history" not in st.session_state: st.session_state.chat_history = []
 
 # ==========================================
 # 4. SIDEBAR
@@ -337,7 +357,7 @@ with st.sidebar:
         }
     )
     st.markdown("---")
-    st.caption("v2.0 · Hackathon Edition")
+    st.caption("v2.0 · Google TechSprint Edition")
 
 # ==========================================
 # PAGE 1: STUDENT CHAT
@@ -386,18 +406,15 @@ if selected == "Student Chat":
         with st.container():
             c_mic, c_input = st.columns([1, 8])
             with c_mic:
+                # Capture audio
                 audio = mic_recorder(start_prompt="🎙️", stop_prompt="⏹️", key='recorder', format="webm", just_once=True)
             with c_input:
                 voice_text = ""
                 if audio:
-                    with st.spinner("Transcribing..."):
-                        try:
-                            audio_file = io.BytesIO(audio['bytes'])
-                            audio_file.name = "audio.webm"
-                            client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
-                            transcript = client.audio.transcriptions.create(model="whisper-1", file=audio_file)
-                            voice_text = transcript.text
-                        except: pass
+                    with st.spinner("Transcribing with Gemini..."):
+                        # Send audio bytes to Gemini 1.5 Flash
+                        voice_text = transcribe_audio_gemini(audio['bytes'])
+                        
                 default_val = voice_text if voice_text else ""
                 user_question = st.text_input("Search", value=default_val, placeholder="Ex: When are the exams? What does the latest circular say?", label_visibility="collapsed")
 
@@ -413,9 +430,10 @@ if selected == "Student Chat":
         st.markdown("</div>", unsafe_allow_html=True)
 
     if user_question:
-        with st.spinner("🧠 Analyzing your question..."):
+        with st.spinner("🧠 Analyzing your question with Gemini 1.5..."):
             try:
-                embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
+                # Use Google Embeddings here
+                embeddings = GoogleGenerativeAIEmbeddings(model="models/text-embedding-004")
                 if os.path.exists("faiss_index"):
                     new_db = FAISS.load_local("faiss_index", embeddings, allow_dangerous_deserialization=True)
                     docs = new_db.similarity_search(user_question)
@@ -491,10 +509,9 @@ if selected == "Admin Portal":
                     upload_to_drive(pdf.name, pdf.name)
                     if os.path.exists(pdf.name): os.remove(pdf.name)
                 
-                # --- FIX: UPDATE GLOBAL SHARED MEMORY INSTANTLY ---
+                # --- UPDATE GLOBAL SHARED MEMORY INSTANTLY ---
                 memory = get_global_memory()
                 for pdf in pdf_docs:
-                    # Insert at the beginning so it's "Recent"
                     memory.files.insert(0, {"name": pdf.name, "id": "local_upload"})
                 
                 text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
@@ -532,7 +549,7 @@ if selected == "About":
         </p>
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
             <div class="chip">💻 Streamlit Frontend</div>
-            <div class="chip">🧠 OpenAI GPT‑4o</div>
+            <div class="chip">🧠 Gemini 1.5 Flash</div>
             <div class="chip">🔍 FAISS Vector DB</div>
             <div class="chip">☁️ Google Drive API</div>
         </div>
