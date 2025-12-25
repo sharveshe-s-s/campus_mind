@@ -57,7 +57,7 @@ try:
 except FileNotFoundError: st.error("🚨 Secrets file not found!")
 
 # ==========================================
-# 2. HACKATHON WINNING CSS (FINAL)
+# 2. HACKATHON WINNING CSS (STRICT ENFORCEMENT)
 # ==========================================
 st.markdown("""
 <style>
@@ -99,35 +99,36 @@ st.markdown("""
     .sidebar-title { font-weight: 800; font-size: 24px; color: #fff; letter-spacing: 0.05em; }
     .sidebar-subtitle { font-size: 12px; color: rgba(255,255,255,0.6); letter-spacing: 0.1em; text-transform: uppercase; }
 
-    /* CENTERED HERO TITLE */
+    /* --- CENTERED HERO TITLE (No Image) --- */
     .hero-container {
         display: flex;
         flex-direction: column;
         align-items: center;
         justify-content: center;
         text-align: center;
-        padding: 40px 0;
+        padding: 60px 0 40px 0; /* More padding for cleaner look */
     }
     .shimmer-text {
         font-weight: 800;
-        font-size: 60px; /* Large Title */
+        font-size: 64px; /* Larger Text */
         background: linear-gradient(120deg, #ffffff 30%, #00ffc3 50%, #00C853 70%);
         background-size: 200% auto;
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         animation: shine 6s linear infinite;
         text-shadow: 0 0 30px rgba(0, 200, 83, 0.2);
-        margin-bottom: 10px;
+        margin: 15px 0;
+        line-height: 1.1;
     }
     @keyframes shine { to { background-position: 200% center; } }
 
-    .hero-tagline { font-size: 18px; color: rgba(235, 241, 255, 0.9); margin-top: 10px; }
+    .hero-tagline { font-size: 20px; color: rgba(235, 241, 255, 0.9); }
     
     .hero-badge {
         display: inline-flex; align-items: center; gap: 8px; padding: 8px 20px;
         border-radius: 999px; background: rgba(0, 200, 83, 0.15);
         border: 1px solid rgba(0, 255, 140, 0.3); font-size: 13px; font-weight: 700;
-        text-transform: uppercase; letter-spacing: 0.1em; color: #00ffc3; margin-bottom: 16px;
+        text-transform: uppercase; letter-spacing: 0.1em; color: #00ffc3;
     }
 
     /* NAVIGATION PILLS */
@@ -162,19 +163,20 @@ st.markdown("""
     }
     div[data-testid="stButton"] button:hover { transform: translateY(-2px); }
 
-    /* --- BULLETPROOF BUTTON SQUASH FIX --- */
+    /* --- STRICT BUTTON SQUASH FIX --- */
+    /* This targets ALL buttons in the Admin portal specifically via the custom class below */
     .stButton button {
         white-space: nowrap !important;
+        width: auto !important;
         display: inline-flex !important;
         align-items: center !important;
         justify-content: center !important;
-        width: auto !important;
     }
     
     /* PROCESS BUTTON STYLE */
     .stButton button.process-btn {
-        min-width: 250px !important; /* Forces width */
-        padding: 14px 32px !important; 
+        min-width: 300px !important; /* MASSIVE MIN-WIDTH to force rectangle */
+        padding: 14px 40px !important; 
         font-size: 16px; font-weight: 700;
         background: linear-gradient(135deg, #00C853, #00e676); color: white;
         border-radius: 12px !important; border: none;
@@ -187,7 +189,7 @@ st.markdown("""
         background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(25px);
         border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.08); padding: 24px;
         transition: transform 0.2s ease;
-        color: #ffffff !important; /* Force text white */
+        color: #ffffff !important; 
     }
     .glass-card:hover { transform: translateY(-5px); border-color: rgba(0, 200, 83, 0.4); }
 
@@ -201,7 +203,7 @@ st.markdown("""
         color: #ffffff !important;
         box-shadow: 0 0 50px rgba(0, 200, 83, 0.1);
         position: relative;
-        word-wrap: break-word; /* Prevents overflow */
+        word-wrap: break-word;
     }
     .answer-title { color: #00ffc3; font-size: 20px; font-weight: 800; display: flex; align-items: center; gap: 12px; }
     .answer-content { font-size: 17px; line-height: 1.7; margin-top: 15px; color: #eef2f6; }
@@ -313,7 +315,7 @@ with st.sidebar:
 # ==========================================
 if selected == "Student Chat":
     
-    # --- CENTERED HERO SECTION (IMAGE REMOVED) ---
+    # --- HERO SECTION (NO IMAGE, CENTERED) ---
     st.markdown("""
     <div class="hero-container">
         <div class="hero-badge">⚡ Campus-ready · 24/7</div>
@@ -324,7 +326,7 @@ if selected == "Student Chat":
 
     st.write("")
 
-    # --- RECENT UPDATES (High Visibility Fix) ---
+    # --- RECENT UPDATES ---
     st.markdown("##### <span style='font-weight:700; color:#fff;'>Recent Circulars</span>", unsafe_allow_html=True)
     with st.spinner("Syncing latest updates..."):
         recent_files = get_recent_circulars()
@@ -335,11 +337,11 @@ if selected == "Student Chat":
         for i, file in enumerate(recent_files):
             fname = file.get('name', 'Untitled Circular')
             with cols[i]:
-                # Force white color on filename
+                # Force white color on filename via inline CSS
                 st.markdown(f"""
                 <div class="glass-card">
                     <div style="color: #00ffc3; font-weight: 700; font-size: 13px; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 10px;">New Circular</div>
-                    <div style="font-size: 15px; font-weight: 600; color: #ffffff; line-height: 1.4; word-wrap: break-word;">{fname[:50]}...</div>
+                    <div style="font-size: 15px; font-weight: 600; color: #ffffff !important; line-height: 1.4; word-wrap: break-word;">{fname[:50]}...</div>
                 </div>
                 """, unsafe_allow_html=True)
     else:
@@ -362,4 +364,147 @@ if selected == "Student Chat":
                 if audio:
                     with st.spinner("Transcribing..."):
                         try:
-                            audio_file = io.BytesIO(audio
+                            audio_file = io.BytesIO(audio['bytes'])
+                            audio_file.name = "audio.webm"
+                            client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
+                            transcript = client.audio.transcriptions.create(model="whisper-1", file=audio_file)
+                            voice_text = transcript.text
+                        except: pass
+                default_val = voice_text if voice_text else ""
+                user_question = st.text_input("Search", value=default_val, placeholder="Ex: When are the exams? What does the latest circular say?", label_visibility="collapsed")
+
+    with right_col:
+        st.markdown("<div class='history-card'>", unsafe_allow_html=True)
+        st.markdown("<div style='font-weight:700; font-size:14px; color:#fff; margin-bottom:12px;'>RECENT TURNS</div>", unsafe_allow_html=True)
+        if st.session_state.chat_history:
+            for item in st.session_state.chat_history[-3:]:
+                label = "You" if item["role"] == "User" else "AI"
+                st.markdown(f"<div class='history-item'><span class='label'>{label}</span><br>{item['text']}</div>", unsafe_allow_html=True)
+        else:
+            st.markdown("<div style='font-size:13px;color:rgba(255,255,255,0.6);'>Your conversation history will appear here.</div>", unsafe_allow_html=True)
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    if user_question:
+        with st.spinner("🧠 Analyzing your question..."):
+            try:
+                embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
+                if os.path.exists("faiss_index"):
+                    new_db = FAISS.load_local("faiss_index", embeddings, allow_dangerous_deserialization=True)
+                    docs = new_db.similarity_search(user_question)
+                    chain = get_conversational_chain()
+                    
+                    res = chain.invoke({"input_documents": docs, "question": user_question}, return_only_outputs=True)
+                    full_response = res['output_text']
+                    
+                    st.session_state.chat_history.append({"role": "User", "text": user_question})
+                    st.session_state.chat_history.append({"role": "AI", "text": full_response})
+
+                    # --- BOX FIX: SINGLE PLACEHOLDER UPDATE ---
+                    answer_placeholder = st.empty()
+                    accumulated_text = ""
+                    words = full_response.split(" ")
+                    
+                    for word in words:
+                        accumulated_text += word + " "
+                        answer_placeholder.markdown(f"""
+                        <div class="answer-box-container">
+                            <div class="answer-title">
+                                <span style="font-size: 24px;">🤖</span><span>CampusMind Answer</span>
+                            </div>
+                            <div class="answer-sub">Context-aware · From your uploaded circulars</div>
+                            <hr style="border-color: rgba(0, 200, 83, 0.3); margin: 16px 0;">
+                            <div class="answer-content">{accumulated_text}▌</div>
+                        </div>
+                        """, unsafe_allow_html=True)
+                        time.sleep(0.04)
+                    
+                    answer_placeholder.markdown(f"""
+                    <div class="answer-box-container">
+                        <div class="answer-title">
+                            <span style="font-size: 24px;">🤖</span><span>CampusMind Answer</span>
+                        </div>
+                        <div class="answer-sub">Context-aware · From your uploaded circulars</div>
+                        <hr style="border-color: rgba(0, 200, 83, 0.3); margin: 16px 0;">
+                        <div class="answer-content">{full_response}</div>
+                    </div>
+                    """, unsafe_allow_html=True)
+                    
+                else:
+                    st.warning("⚠️ Knowledge base empty. Please upload circulars in the Admin Portal.")
+            except Exception as e:
+                st.error(f"Error: {e}")
+
+# ==========================================
+# PAGE 2: ADMIN PORTAL
+# ==========================================
+if selected == "Admin Portal":
+    # --- FIX: HUGE COLUMN WIDTH FOR BUTTON ---
+    # Changing layout to [3, 7] to give button plenty of room
+    c1, c2 = st.columns([3, 7]) 
+    with c1:
+        if lottie_admin: st_lottie(lottie_admin, height=180)
+    with c2:
+        st.title("Admin Upload")
+        st.markdown('<p style="color:#c0c7df;font-size:16px;">Securely upload circulars and instantly refresh the AI\'s knowledge base.</p>', unsafe_allow_html=True)
+
+    st.markdown('<div class="glass-card">', unsafe_allow_html=True)
+    st.markdown('<div class="chip">📁 <span>Upload PDF circulars</span></div><br><br>', unsafe_allow_html=True)
+    pdf_docs = st.file_uploader("Select PDF Files", accept_multiple_files=True, type=['pdf'])
+    
+    st.write("")
+    
+    # Button with specific ID for styling
+    if st.button("Process & Upload", key="process_btn", help="Click to process and upload documents"):
+        if pdf_docs:
+            with st.status("Processing...", expanded=True):
+                text = ""
+                for pdf in pdf_docs:
+                    with pdfplumber.open(pdf) as pdf_file:
+                        for page in pdf_file.pages:
+                            t = page.extract_text()
+                            if t: text += t
+                    with open(pdf.name, "wb") as f: f.write(pdf.getbuffer())
+                    upload_to_drive(pdf.name, pdf.name)
+                    if os.path.exists(pdf.name): os.remove(pdf.name)
+                
+                text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
+                chunks = text_splitter.split_text(text)
+                get_vector_store(chunks)
+                st.success("✅ Knowledge base updated successfully!")
+                time.sleep(1)
+                st.rerun()
+        else:
+            st.warning("Please select at least one PDF file.")
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    # Inject Class
+    st.markdown("""
+    <script>
+        const buttons = window.parent.document.querySelectorAll('button');
+        buttons.forEach(btn => {
+            if (btn.innerText === 'Process & Upload') {
+                btn.classList.add('process-btn');
+            }
+        });
+    </script>
+    """, unsafe_allow_html=True)
+
+# ==========================================
+# PAGE 3: ABOUT
+# ==========================================
+if selected == "About":
+    st.title("About")
+    st.markdown("""
+    <div class="glass-card">
+        <h3 style="margin-bottom:12px; font-weight: 800;">CampusMind AI</h3>
+        <p style="color:#c0c7df;font-size:15px;line-height:1.6;margin-bottom:20px;">
+            A next‑gen smart campus assistant built for the Innovation Hackathon. It uses advanced AI to provide instant, accurate answers from official campus documents.
+        </p>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
+            <div class="chip">💻 Streamlit Frontend</div>
+            <div class="chip">🧠 OpenAI GPT‑4o</div>
+            <div class="chip">🔍 FAISS Vector DB</div>
+            <div class="chip">☁️ Google Drive API</div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
