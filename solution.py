@@ -7,7 +7,6 @@ import pdfplumber
 import io
 import os
 import time
-from datetime import datetime
 
 # --- STANDARD IMPORTS ---
 from langchain.text_splitter import RecursiveCharacterTextSplitter
@@ -58,7 +57,7 @@ try:
 except FileNotFoundError: st.error("🚨 Secrets file not found!")
 
 # ==========================================
-# 2. HACKATHON WINNING CSS (PRESERVED)
+# 2. HACKATHON WINNING CSS (PERFECTED)
 # ==========================================
 st.markdown("""
 <style>
@@ -256,11 +255,8 @@ def upload_to_drive(file_path, file_name):
     except Exception as e: return f"Error: {e}"
 
 def get_recent_circulars():
-    """
-    Fetches circulars from Drive AND Session State (for instant update).
-    """
+    """Fetches circulars from Drive AND Session State (for instant update)."""
     drive_files = []
-    # 1. Try Fetching from Drive
     try:
         if "gcp_service_account" in st.secrets:
             key_dict = st.secrets["gcp_service_account"]
@@ -271,13 +267,8 @@ def get_recent_circulars():
             drive_files = results.get('files', [])
     except: pass
 
-    # 2. Merge with Local Session State (Instant Updates)
     local_files = st.session_state.get('local_circulars', [])
-    
-    # Combine (Local first, then Drive)
     combined = local_files + drive_files
-    
-    # Deduplicate by name
     seen_names = set()
     unique_files = []
     for f in combined:
@@ -287,9 +278,29 @@ def get_recent_circulars():
             
     return unique_files[:3]
 
+# --- KEY FIX: MEMORY RETENTION LOGIC ---
 def get_vector_store(text_chunks):
+    """
+    Creates OR Updates the vector store.
+    If 'faiss_index' exists, it loads it and adds new texts (appending memory).
+    If not, it creates a new one.
+    """
     embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
-    vector_store = FAISS.from_texts(text_chunks, embedding=embeddings)
+    
+    if os.path.exists("faiss_index"):
+        try:
+            # LOAD existing DB (Preserve memory)
+            vector_store = FAISS.load_local("faiss_index", embeddings, allow_dangerous_deserialization=True)
+            # ADD new chunks
+            vector_store.add_texts(text_chunks)
+        except:
+            # Fallback if corrupt
+            vector_store = FAISS.from_texts(text_chunks, embedding=embeddings)
+    else:
+        # CREATE new DB (First run)
+        vector_store = FAISS.from_texts(text_chunks, embedding=embeddings)
+    
+    # SAVE updated DB
     vector_store.save_local("faiss_index")
 
 def get_conversational_chain():
@@ -307,7 +318,7 @@ lottie_admin = load_lottieurl("https://assets2.lottiefiles.com/packages/lf20_w51
 
 # 3b. SESSION STATE INIT
 if "chat_history" not in st.session_state: st.session_state.chat_history = []
-if "local_circulars" not in st.session_state: st.session_state.local_circulars = [] # Fallback list
+if "local_circulars" not in st.session_state: st.session_state.local_circulars = [] 
 
 # ==========================================
 # 4. SIDEBAR
@@ -348,7 +359,7 @@ if selected == "Student Chat":
 
     st.write("")
 
-    # --- RECENT UPDATES (Now merges Session State for instant feedback) ---
+    # --- RECENT UPDATES ---
     st.markdown("##### <span style='font-weight:700; color:#fff;'>Recent Circulars</span>", unsafe_allow_html=True)
     with st.spinner("Syncing latest updates..."):
         recent_files = get_recent_circulars()
@@ -494,7 +505,10 @@ if selected == "Admin Portal":
 
                 text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
                 chunks = text_splitter.split_text(text)
+                
+                # Updated Vector Store Function
                 get_vector_store(chunks)
+                
                 st.success("✅ Knowledge base updated successfully!")
                 time.sleep(1)
                 st.rerun()
