@@ -11,7 +11,10 @@ import time
 # --- GOOGLE GENAI IMPORTS ---
 from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
 import google.generativeai as genai
-from langchain.text_splitter import RecursiveCharacterTextSplitter
+
+# --- FIX: NEW IMPORT PATH FOR TEXT SPLITTER ---
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+
 from langchain_community.vectorstores import FAISS
 from langchain.chains.question_answering import load_qa_chain
 from langchain_core.prompts import PromptTemplate 
