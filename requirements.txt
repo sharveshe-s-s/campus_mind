@@ -11,3 +11,4 @@ google-generativeai
 faiss-cpu
 google-api-python-client
 google-auth
+openai
