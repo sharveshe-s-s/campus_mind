@@ -8,25 +8,20 @@ import io
 import os
 import time
 
-# --- STANDARD IMPORTS ---
+# --- HYBRID IMPORTS ---
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain_openai import OpenAIEmbeddings
+from langchain_openai import OpenAIEmbeddings, ChatOpenAI
 from langchain_community.vectorstores import FAISS
-from langchain_openai import ChatOpenAI
 from langchain.chains.question_answering import load_qa_chain
 from langchain_core.prompts import PromptTemplate 
 
-# Google Drive & Auth
+# Google for Audio (Gemini)
+import google.generativeai as genai
+
+# Google for Drive
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
-
-# OpenAI Client
-from openai import OpenAI
-
-# --- NEW: Google Gemini for Audio ---
-import google.generativeai as genai
-from google.generativeai.types import HarmCategory, HarmBlockThreshold
 
 # ==========================================
 # 0. THEME ENGINE
@@ -67,7 +62,7 @@ try:
 except FileNotFoundError: st.error("🚨 Secrets file not found!")
 
 # ==========================================
-# 2. HACKATHON WINNING CSS
+# 2. HACKATHON WINNING CSS (EXACT COPY)
 # ==========================================
 st.markdown("""
 <style>
@@ -250,26 +245,14 @@ def update_global_files_from_drive():
 if not get_global_memory().files:
     update_global_files_from_drive()
 
-# --- HYBRID AUDIO: GEMINI FLASH (ROBUST) ---
+# --- HYBRID AUDIO: GEMINI FLASH ---
 def transcribe_audio_gemini(audio_bytes):
     try:
         model = genai.GenerativeModel("gemini-1.5-flash")
-        
-        # Disable safety settings to prevent random blocks on audio
-        safety_settings = {
-            HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
-            HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE,
-            HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_NONE,
-            HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
-        }
-
-        response = model.generate_content(
-            [
-                "Transcribe this audio exactly. Output only the English text.",
-                {"mime_type": "audio/webm", "data": audio_bytes}
-            ],
-            safety_settings=safety_settings
-        )
+        response = model.generate_content([
+            "Transcribe this audio exactly. Output only the text.",
+            {"mime_type": "audio/webm", "data": audio_bytes}
+        ])
         return response.text
     except:
         return ""
@@ -317,17 +300,14 @@ lottie_admin = load_lottieurl("https://assets2.lottiefiles.com/packages/lf20_w51
 if "chat_history" not in st.session_state: st.session_state.chat_history = []
 if "user_query" not in st.session_state: st.session_state.user_query = ""
 
-# THE FIX: Direct Session State Access Callback
-def audio_callback():
-    # 'recorder' is the key used in mic_recorder
-    if st.session_state.recorder:
-        audio_bytes = st.session_state.recorder['bytes']
+# THE FIX: This function runs IMMEDIATELY when the mic stops
+def audio_callback(audio_data):
+    if audio_data:
         try:
-            # Show a small toast notification that we are working
-            st.toast("🎙️ Processing Audio with Gemini...", icon="⚡")
-            text = transcribe_audio_gemini(audio_bytes)
-            if text:
-                st.session_state.user_query = text
+            with st.spinner("Processing Audio..."):
+                text = transcribe_audio_gemini(audio_data)
+                if text:
+                    st.session_state.user_query = text
         except:
             pass
 
@@ -400,15 +380,17 @@ if selected == "Student Chat":
         with st.container():
             c_mic, c_input = st.columns([1, 8])
             with c_mic:
-                # --- ROBUST CALLBACK CONFIG ---
+                # --- FIXED: USING CALLBACK FOR INSTANT RESPONSE ---
+                # This fixes the "dead button" and "old text" issues
                 mic_recorder(
                     start_prompt="🎙️", 
                     stop_prompt="⏹️", 
                     key='recorder',
                     format="webm",
-                    on_recorder_factory=audio_callback # The secret weapon for reliability
+                    callback=lambda x: audio_callback(x) # Call our helper
                 )
             with c_input:
+                # 3. Bind Text Input to Session State
                 user_question = st.text_input(
                     "Search", 
                     value=st.session_state.user_query, 
@@ -417,6 +399,7 @@ if selected == "Student Chat":
                     key="search_box"
                 )
                 
+                # 4. Sync manual typing back to session state
                 if user_question != st.session_state.user_query:
                     st.session_state.user_query = user_question
 
@@ -437,8 +420,12 @@ if selected == "Student Chat":
                 embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
                 if os.path.exists("faiss_index"):
                     new_db = FAISS.load_local("faiss_index", embeddings, allow_dangerous_deserialization=True)
+                    
+                    # k=12 for tables
                     docs = new_db.similarity_search(user_question, k=12)
+                    
                     chain = get_conversational_chain()
+                    
                     res = chain.invoke({"input_documents": docs, "question": user_question}, return_only_outputs=True)
                     full_response = res['output_text']
                     
@@ -473,6 +460,7 @@ if selected == "Student Chat":
                         <div class="answer-content">{full_response}</div>
                     </div>
                     """, unsafe_allow_html=True)
+                    
                 else:
                     st.warning("⚠️ Knowledge base empty. Please upload circulars in the Admin Portal.")
             except Exception as e:
@@ -508,10 +496,12 @@ if selected == "Admin Portal":
                     upload_to_drive(pdf.name, pdf.name)
                     if os.path.exists(pdf.name): os.remove(pdf.name)
                 
+                # Update Memory
                 memory = get_global_memory()
                 for pdf in pdf_docs:
                     memory.files.insert(0, {"name": pdf.name, "id": "local_upload"})
                 
+                # CHUNK SIZE 3000 (To fix the table issue)
                 text_splitter = RecursiveCharacterTextSplitter(chunk_size=3000, chunk_overlap=200)
                 chunks = text_splitter.split_text(text)
                 get_vector_store(chunks)
