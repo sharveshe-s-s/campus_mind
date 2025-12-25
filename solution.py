@@ -8,15 +8,15 @@ import io
 import os
 import time
 
-# --- GOOGLE GENAI IMPORTS ---
-from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
-import google.generativeai as genai
+# --- HYBRID AI IMPORTS ---
+from langchain_openai import ChatOpenAI, OpenAIEmbeddings  # SPEED & BRAINS
+import google.generativeai as genai                       # GOOGLE EARS (AUDIO)
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import FAISS
 from langchain.chains.question_answering import load_qa_chain
 from langchain_core.prompts import PromptTemplate 
 
-# Google Drive & Auth
+# --- GOOGLE DRIVE IMPORTS ---
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
@@ -26,12 +26,16 @@ from googleapiclient.http import MediaFileUpload
 # ==========================================
 st.set_page_config(page_title="CampusMind AI", page_icon="🎓", layout="wide")
 
-# --- AUTH SETUP ---
 try:
-    if "GOOGLE_API_KEY" in st.secrets: 
+    # 1. OpenAI Key (For Speed & Reasoning)
+    if "OPENAI_API_KEY" in st.secrets:
+        os.environ["OPENAI_API_KEY"] = st.secrets["OPENAI_API_KEY"]
+
+    # 2. Google Key (For Gemini Audio & Drive)
+    if "GOOGLE_API_KEY" in st.secrets:
         os.environ["GOOGLE_API_KEY"] = st.secrets["GOOGLE_API_KEY"]
         genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
-    
+        
     DRIVE_FOLDER_ID = '1IRAXoxny14JvI6UbJ1zPyUduwlzm5Egm' 
 except Exception as e:
     st.error(f"🚨 Secrets Error: {e}")
@@ -80,72 +84,46 @@ def update_global_files_from_drive():
 if not get_global_memory().files:
     update_global_files_from_drive()
 
-# --- GEMINI FUNCTIONS ---
+# --- GOOGLE AI FEATURE: GEMINI AUDIO TRANSCRIPTION ---
 def transcribe_audio_gemini(audio_bytes):
     try:
-        # Using 'gemini-pro' for maximum compatibility
-        model = genai.GenerativeModel("gemini-pro")
+        # Gemini 1.5 Flash is FAST and FREE for audio
+        model = genai.GenerativeModel("gemini-1.5-flash")
         response = model.generate_content([
-            "Transcribe this audio exactly.",
+            "Transcribe this audio exactly. Output only the text.",
             {"mime_type": "audio/webm", "data": audio_bytes}
         ])
         return response.text
     except:
         return ""
 
-# --- INDEX HANDLING (VERSION 10 - STABLE) ---
-INDEX_NAME = "faiss_index_v10"
+# --- OPENAI BACKEND (FAST & ROBUST) ---
+INDEX_NAME = "faiss_index_hybrid"
 
-def get_vector_store_batched(text_chunks):
-    # Using 'models/embedding-001' - The standard for this library version
-    embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
+def get_vector_store(text_chunks):
+    # OpenAI Embeddings = Fast, No strict 429 errors
+    embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
     
-    # BATCH SIZE 5 TO PREVENT CRASHES
-    batch_size = 5 
-    total_chunks = len(text_chunks)
-    progress_text = "Vectorizing... (Auto-throttling enabled)"
-    my_bar = st.progress(0, text=progress_text)
+    if os.path.exists(INDEX_NAME):
+        try:
+            vector_store = FAISS.load_local(INDEX_NAME, embeddings, allow_dangerous_deserialization=True)
+            vector_store.add_texts(text_chunks)
+        except:
+            vector_store = FAISS.from_texts(text_chunks, embedding=embeddings)
+    else:
+        vector_store = FAISS.from_texts(text_chunks, embedding=embeddings)
     
-    vector_store = None
-    
-    for i in range(0, total_chunks, batch_size):
-        batch = text_chunks[i : i + batch_size]
-        
-        # Retry logic for 429 errors
-        for attempt in range(3):
-            try:
-                if vector_store is None:
-                    if os.path.exists(INDEX_NAME):
-                        try:
-                            vector_store = FAISS.load_local(INDEX_NAME, embeddings, allow_dangerous_deserialization=True)
-                            vector_store.add_texts(batch)
-                        except:
-                            vector_store = FAISS.from_texts(batch, embedding=embeddings)
-                    else:
-                        vector_store = FAISS.from_texts(batch, embedding=embeddings)
-                else:
-                    vector_store.add_texts(batch)
-                break # Success, exit retry loop
-            except Exception as e:
-                time.sleep(10) # Wait 10s on error
-        
-        percent_complete = min(1.0, (i + batch_size) / total_chunks)
-        my_bar.progress(percent_complete, text=f"Vectorizing... {int(percent_complete*100)}%")
-        time.sleep(2.0) # Safety delay
-        
-    if vector_store:
-        vector_store.save_local(INDEX_NAME)
-    my_bar.empty()
+    vector_store.save_local(INDEX_NAME)
 
 def get_conversational_chain():
     prompt_template = """
-    Answer based on the Context provided.
+    Answer the question as detailed as possible from the provided context.
     Context: {context}
     Question: {question}
     Answer:
     """
-    # STABLE MODEL: gemini-pro
-    model = ChatGoogleGenerativeAI(model="gemini-pro", temperature=0.3)
+    # OpenAI GPT-4o (or 3.5) = Smart & Fast
+    model = ChatOpenAI(model="gpt-4o-mini", temperature=0.3)
     prompt = PromptTemplate(template=prompt_template, input_variables=["context", "question"])
     return load_qa_chain(model, chain_type="stuff", prompt=prompt)
 
@@ -164,6 +142,8 @@ with st.sidebar:
     st.image("https://cdn-icons-png.flaticon.com/512/4712/4712035.png", width=64)
     st.title("CampusMind")
     selected = option_menu("Nav", ["Student Chat", "Admin Portal"], icons=['chat', 'cloud'], default_index=0)
+    st.markdown("---")
+    st.caption("⚡ Powered by: OpenAI + Google Gemini")
 
 # ==========================================
 # PAGE 1: CHAT
@@ -181,18 +161,20 @@ if selected == "Student Chat":
 
     c1, c2 = st.columns([1, 8])
     with c1:
+        # Mic Recorder
         audio = mic_recorder(start_prompt="🎙️", stop_prompt="⏹️", key='recorder')
     with c2:
         voice_text = ""
         if audio:
-            with st.spinner("Listening..."):
+            with st.spinner("Processing Audio with Gemini 1.5..."):
+                # GOOGLE AI FEATURE HERE
                 voice_text = transcribe_audio_gemini(audio['bytes'])
         user_question = st.text_input("Ask a question", value=voice_text)
 
     if user_question:
         with st.spinner("Thinking..."):
             try:
-                embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
+                embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
                 if os.path.exists(INDEX_NAME):
                     new_db = FAISS.load_local(INDEX_NAME, embeddings, allow_dangerous_deserialization=True)
                     docs = new_db.similarity_search(user_question)
@@ -213,11 +195,12 @@ if selected == "Admin Portal":
     
     if st.button("Upload"):
         if pdf_docs:
-            with st.spinner("Processing..."):
+            with st.spinner("Processing High-Speed Vectors..."):
                 raw_text = ""
                 for pdf in pdf_docs:
                     with pdfplumber.open(pdf) as f:
                         for page in f.pages: raw_text += page.extract_text()
+                    # GOOGLE CLOUD FEATURE HERE
                     upload_to_drive(pdf.name, pdf.name)
                 
                 get_global_memory().files = [{"name": p.name} for p in pdf_docs] + get_global_memory().files
@@ -225,7 +208,8 @@ if selected == "Admin Portal":
                 text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
                 chunks = text_splitter.split_text(raw_text)
                 
-                get_vector_store_batched(chunks)
+                # Fast OpenAI Vectorization (No Batching Delays!)
+                get_vector_store(chunks)
                 
                 st.success("Knowledge Base Updated Successfully!")
                 time.sleep(1)
