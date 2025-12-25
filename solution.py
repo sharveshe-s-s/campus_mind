@@ -28,9 +28,16 @@ from openai import OpenAI
 # 0. THEME ENGINE (Force Dark Mode)
 # ==========================================
 def force_dark_mode():
+    """
+    Writes a config file to force Streamlit into Dark Mode.
+    This ensures a consistent look and feel.
+    """
     config_dir = ".streamlit"
     config_path = os.path.join(config_dir, "config.toml")
-    if not os.path.exists(config_dir): os.makedirs(config_dir)
+    
+    if not os.path.exists(config_dir):
+        os.makedirs(config_dir)
+        
     config_content = """
 [theme]
 base = "dark"
@@ -41,7 +48,8 @@ textColor = "#fafafa"
 font = "sans serif"
     """
     if not os.path.exists(config_path):
-        with open(config_path, "w") as f: f.write(config_content)
+        with open(config_path, "w") as f:
+            f.write(config_content)
         st.rerun()
 
 force_dark_mode()
@@ -63,53 +71,69 @@ except FileNotFoundError:
 # ==========================================
 st.markdown("""
 <style>
-    /* 1. BACKGROUND */
+    /* 1. MAIN BACKGROUND: Deep Cyberpunk Gradient */
     .stApp {
         background: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%);
     }
 
-    /* 2. SIDEBAR */
+    /* 2. SIDEBAR POLISH */
     section[data-testid="stSidebar"] {
         background-color: rgba(0, 0, 0, 0.4);
         border-right: 1px solid rgba(255, 255, 255, 0.1);
     }
 
-    /* 3. INPUT BOX (White Box, Black Text - High Visibility) */
+    /* 3. INPUT BOX - THE "HIGH VISIBILITY" FIX */
+    /* We make the input box WHITE with BLACK text. Cannot miss it. */
     .stTextInput input {
         background-color: #ffffff !important;
         color: #000000 !important;
         border-radius: 12px;
-        padding: 15px;
+        padding: 12px 12px 12px 50px; /* Add padding for the mic icon */
         font-size: 16px;
-        border: 2px solid #ccc;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        border: 2px solid transparent;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.3);
     }
     .stTextInput input:focus {
         border-color: #00C853 !important;
         box-shadow: 0 0 15px rgba(0, 200, 83, 0.5);
     }
 
-    /* 4. MIC BUTTON */
+    /* 4. MIC BUTTON (Integrated look) */
     div[data-testid="stButton"] button {
         border-radius: 50%;
-        width: 55px;
-        height: 55px;
-        background: rgba(0, 200, 83, 0.2);
-        border: 2px solid #00C853;
+        width: 40px;
+        height: 40px;
+        padding: 0;
+        background: transparent; /* Transparent background */
+        border: none; /* No border */
         color: #00C853;
-        font-size: 24px;
+        font-size: 20px;
         transition: all 0.3s ease;
+        position: relative; /* For positioning */
+        left: 5px; /* Adjust position */
+        top: 2px;
+        z-index: 1; /* Ensure it's above the input */
     }
     div[data-testid="stButton"] button:hover {
-        background: #00C853;
-        color: white;
+        color: #009624;
         transform: scale(1.1);
     }
-    
-    /* 5. PROCESS BUTTON OVERRIDE (For Admin) */
+
+    /* 5. PROCESS BUTTON (Pill Shape Override) */
+    /* This specifically targets the "Process & Upload" button */
     .stButton button.process-btn {
-        width: auto;
-        border-radius: 8px;
+        border-radius: 30px !important; /* Rounded rectangle */
+        width: auto !important;
+        height: auto !important;
+        padding: 10px 30px !important;
+        background: linear-gradient(90deg, #00C853 0%, #009624 100%);
+        color: white;
+        font-weight: bold;
+        box-shadow: 0 4px 15px rgba(0, 200, 83, 0.3);
+    }
+    .stButton button.process-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(0, 200, 83, 0.5);
     }
 
     /* 6. GLASS CARDS */
@@ -123,27 +147,19 @@ st.markdown("""
         box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
     }
 
-    /* 7. QUICK ACTION PILLS */
-    .quick-pill {
-        display: inline-block;
-        background: rgba(255,255,255,0.1);
-        padding: 5px 15px;
-        border-radius: 20px;
-        margin-right: 10px;
-        font-size: 14px;
-        border: 1px solid rgba(255,255,255,0.2);
-        color: #ddd;
-    }
-
-    /* 8. ANSWER BOX */
+    /* 7. AI ANSWER BOX */
     .answer-box {
         background: rgba(0, 0, 0, 0.6);
         border-left: 6px solid #00C853;
         padding: 25px;
         border-radius: 12px;
         margin-top: 20px;
-        color: #ffffff !important;
+        color: #ffffff !important; /* Force White Text */
     }
+
+    /* 8. HIDE STREAMLIT UI ELEMENTS */
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
 </style>
 """, unsafe_allow_html=True)
 
@@ -195,14 +211,14 @@ def get_conversational_chain():
     prompt = PromptTemplate(template=prompt_template, input_variables=["context", "question"])
     return load_qa_chain(model, chain_type="stuff", prompt=prompt)
 
-# --- ASSETS ---
-# New "Futuristic AI" Animation for Student Chat
-lottie_student_ai = load_lottieurl("https://lottie.host/020cc52c-7472-4632-841f-82559b95427d/21H5gH1p7E.json") 
+# ASSETS
+# New, more impressive AI animation for Student Chat
+lottie_student_ai = load_lottieurl("https://lottie.host/99977635-960c-4432-9987-440077149909/99977635-960c-4432-9987-440077149909.json")
 # Admin Laptop Animation
 lottie_admin = load_lottieurl("https://assets2.lottiefiles.com/packages/lf20_w51pcehl.json")
 
 # ==========================================
-# 4. SIDEBAR MENU
+# 4. SIDEBAR
 # ==========================================
 with st.sidebar:
     st.image("https://cdn-icons-png.flaticon.com/512/4712/4712035.png", width=50)
@@ -219,37 +235,31 @@ with st.sidebar:
         }
     )
     st.markdown("---")
-    st.caption("Hackathon Edition v2.0")
+    st.caption("v2.0 | Hackathon Edition")
 
 # ==========================================
-# PAGE 1: STUDENT CHAT (THE "BEST WEBSITE" LOOK)
+# PAGE 1: STUDENT CHAT (Winner UI)
 # ==========================================
 if selected == "Student Chat":
     
-    # --- HERO SECTION (Split Layout) ---
-    # Left: Cool Animation | Right: Welcome Text
-    col_hero_1, col_hero_2 = st.columns([1, 2])
-    
-    with col_hero_1:
+    # --- HERO HEADER WITH ANIMATION ---
+    # Split layout: Animation on left, Text on right
+    col1, col2 = st.columns([1, 2])
+    with col1:
         if lottie_student_ai: 
-            st_lottie(lottie_student_ai, height=200, key="ai_anim")
-    
-    with col_hero_2:
-        st.markdown("<br>", unsafe_allow_html=True) # Spacer
+            st_lottie(lottie_student_ai, height=200, key="hero_anim")
+    with col2:
+        # Vertically center the text
+        st.markdown("<div style='display: flex; flex-direction: column; justify-content: center; height: 200px;'>", unsafe_allow_html=True)
         st.markdown("<h1 style='font-size: 48px; margin-bottom: 0;'>CampusMind AI</h1>", unsafe_allow_html=True)
-        st.markdown("""
-        <div style='display: flex; align-items: center; gap: 10px; margin-top: 10px;'>
-            <span style='background: #00C853; width: 10px; height: 10px; border-radius: 50%; display: inline-block;'></span>
-            <span style='color: #bbb; font-size: 16px;'>System Online • Knowledge Base Active</span>
-        </div>
-        """, unsafe_allow_html=True)
+        st.markdown("<p style='font-size: 18px; opacity: 0.8;'>Your 24/7 Smart Campus Assistant</p>", unsafe_allow_html=True)
+        st.markdown("</div>", unsafe_allow_html=True)
 
-    st.markdown("---")
+    st.write("") # Spacer
 
-    # --- RECENT UPDATES (Dashboard Widgets) ---
-    st.subheader("📢 Live Circulars")
-    
-    with st.spinner("Syncing with Admin Office..."):
+    # --- RECENT UPDATES (GLASS CARDS) ---
+    st.markdown("##### 📢 Recent Updates")
+    with st.spinner("Syncing..."):
         recent_files = get_recent_circulars()
         
     if recent_files:
@@ -259,51 +269,48 @@ if selected == "Student Chat":
             with cols[i]:
                 st.markdown(f"""
                 <div class="glass-card">
-                    <div style="color: #00C853; font-weight: bold; font-size: 18px; margin-bottom: 5px;">📄 Update {i+1}</div>
-                    <div style="font-size: 14px; color: white;">{file['name'][:25]}...</div>
-                    <div style="font-size: 12px; color: #888; margin-top: 5px;">Click mic to ask about this</div>
+                    <div style="color: #00C853; font-weight: bold; font-size: 18px;">📄 New Circular</div>
+                    <div style="margin-top: 5px; font-size: 14px; color: white;">{file['name'][:25]}...</div>
+                    <div style="font-size: 12px; color: #aaa; margin-top: 5px;">Tap the mic to ask about this.</div>
                 </div>
                 """, unsafe_allow_html=True)
     else:
-        st.info("No recent circulars found on Drive.")
+        st.info("No recent circulars uploaded. You can still ask general questions!")
 
-    # --- COMMAND CENTER (The Chat) ---
-    st.markdown("<br>", unsafe_allow_html=True)
-    
-    # "Quick Prompts" Visuals
-    st.markdown("""
-    <div style="margin-bottom: 10px;">
-        <span class="quick-pill">📅 Exams</span>
-        <span class="quick-pill">🚌 Bus Routes</span>
-        <span class="quick-pill">💰 Fee Structure</span>
-        <span class="quick-pill">📝 Revaluation</span>
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown("---")
 
-    # Chat Interface Columns
-    c_mic, c_input = st.columns([1, 10], gap="small")
+    # --- CHAT INTERFACE (Perfect Alignment) ---
+    st.markdown("##### 💬 Ask Anything")
     
-    with c_mic:
-        st.write("") # Alignment push
-        audio = mic_recorder(start_prompt="🎙️", stop_prompt="⏹️", key='recorder', format="webm", just_once=True)
+    # Use a container to visually group the mic and input
+    with st.container():
+        # Use columns to place them side-by-side with minimal gap
+        c_mic, c_input = st.columns([1, 11])
         
-    with c_input:
-        voice_text = ""
-        if audio:
-            try:
-                audio_file = io.BytesIO(audio['bytes'])
-                audio_file.name = "audio.webm"
-                client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
-                transcript = client.audio.transcriptions.create(model="whisper-1", file=audio_file)
-                voice_text = transcript.text
-            except: pass
+        with c_mic:
+            # The Mic Button (CSS makes it look integrated)
+            audio = mic_recorder(start_prompt="🎙️", stop_prompt="⏹️", key='recorder', format="webm", just_once=True)
             
-        default_val = voice_text if voice_text else ""
-        user_question = st.text_input("Search", value=default_val, placeholder="Ask anything about the campus...", label_visibility="collapsed")
+        with c_input:
+            # Voice Processing
+            voice_text = ""
+            if audio:
+                with st.spinner("Processing voice..."):
+                    try:
+                        audio_file = io.BytesIO(audio['bytes'])
+                        audio_file.name = "audio.webm"
+                        client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
+                        transcript = client.audio.transcriptions.create(model="whisper-1", file=audio_file)
+                        voice_text = transcript.text
+                    except: pass
+            
+            # The Input Box (CSS adds padding for the mic)
+            default_val = voice_text if voice_text else ""
+            user_question = st.text_input("Search", value=default_val, placeholder="Ex: When are the exams?", label_visibility="collapsed")
 
-    # --- AI ANSWER SECTION ---
+    # --- ANSWER SECTION ---
     if user_question:
-        with st.spinner("🧠 Processing query..."):
+        with st.spinner("🧠 Analyzing..."):
             try:
                 embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
                 if os.path.exists("faiss_index"):
@@ -312,20 +319,21 @@ if selected == "Student Chat":
                     chain = get_conversational_chain()
                     response = chain.invoke({"input_documents": docs, "question": user_question}, return_only_outputs=True)
                     
+                    # VISIBILITY FIX: .answer-box uses explicit white color
                     st.markdown(f"""
                     <div class="answer-box">
-                        <h3 style="color: #00C853; margin: 0;">🤖 Answer</h3>
+                        <h3 style="color: #00C853; margin: 0;">🤖 Answer:</h3>
                         <hr style="border-color: rgba(255,255,255,0.2); margin: 15px 0;">
                         <p style="font-size: 18px; line-height: 1.6; color: white;">{response['output_text']}</p>
                     </div>
                     """, unsafe_allow_html=True)
                 else:
-                    st.warning("⚠️ Knowledge Base Empty.")
+                    st.warning("⚠️ Knowledge Base Empty. Please upload circulars in Admin Portal.")
             except Exception as e:
                 st.error(f"Error: {e}")
 
 # ==========================================
-# PAGE 2: ADMIN PORTAL (Touch Nothing!)
+# PAGE 2: ADMIN PORTAL
 # ==========================================
 if selected == "Admin Portal":
     c1, c2 = st.columns([1, 3])
@@ -339,7 +347,8 @@ if selected == "Admin Portal":
     pdf_docs = st.file_uploader("Select PDF Files", accept_multiple_files=True, type=['pdf'])
     
     st.write("")
-    if st.button("Process & Upload"):
+    # We add a custom class 'process-btn' to this button for styling
+    if st.button("Process & Upload", key="process_btn", help="Click to process and upload documents"):
         if pdf_docs:
             with st.status("Processing...", expanded=True):
                 text = ""
@@ -360,7 +369,22 @@ if selected == "Admin Portal":
                 st.success("Success!")
                 time.sleep(1)
                 st.rerun()
+        else:
+            st.warning("Please select at least one PDF file.")
     st.markdown('</div>', unsafe_allow_html=True)
+
+    # Inject custom CSS class to the button via JavaScript for precise targeting
+    st.markdown("""
+    <script>
+        const buttons = window.parent.document.querySelectorAll('button');
+        buttons.forEach(btn => {
+            if (btn.innerText === 'Process & Upload') {
+                btn.classList.add('process-btn');
+            }
+        });
+    </script>
+    """, unsafe_allow_html=True)
+
 
 # ==========================================
 # PAGE 3: ABOUT
@@ -371,5 +395,11 @@ if selected == "About":
     <div class="glass-card">
         <h3>CampusMind AI</h3>
         <p style="color:white;">Built for the 2024 Innovation Hackathon.</p>
+        <ul>
+            <li><b>Frontend:</b> Streamlit (Custom CSS)</li>
+            <li><b>AI Brain:</b> OpenAI GPT-4o-Mini</li>
+            <li><b>Vector DB:</b> FAISS</li>
+            <li><b>Storage:</b> Google Drive API</li>
+        </ul>
     </div>
     """, unsafe_allow_html=True)
