@@ -37,45 +37,7 @@ except Exception as e:
     st.error(f"🚨 Secrets Error: {e}")
 
 # ==========================================
-# 1. SMART MODEL SELECTOR (THE FIX)
-# ==========================================
-def get_available_model_name():
-    """
-    Asks Google which models are available to this API Key 
-    and returns the best one to avoid 404 errors.
-    """
-    try:
-        # List all models
-        models = [m.name for m in genai.list_models()]
-        
-        # Priority list (Newest/Fastest first)
-        priorities = [
-            'models/gemini-1.5-flash',
-            'models/gemini-1.5-pro',
-            'models/gemini-pro',
-            'models/gemini-1.0-pro'
-        ]
-        
-        for p in priorities:
-            if p in models:
-                # Remove 'models/' prefix for LangChain compatibility if needed
-                return p.replace("models/", "")
-        
-        # Fallback: Just take the first generative model found
-        for m in models:
-            if "generateContent" in m.supported_generation_methods:
-                return m.name.replace("models/", "")
-                
-        return "gemini-pro" # Blind fallback
-    except Exception as e:
-        return "gemini-pro"
-
-# CACHE THE MODEL NAME SO WE DON'T CALL API EVERY TIME
-if "valid_model_name" not in st.session_state:
-    st.session_state.valid_model_name = get_available_model_name()
-
-# ==========================================
-# 2. HELPER FUNCTIONS
+# 1. HELPER FUNCTIONS
 # ==========================================
 def load_lottieurl(url):
     try:
@@ -121,8 +83,8 @@ if not get_global_memory().files:
 # --- GEMINI FUNCTIONS ---
 def transcribe_audio_gemini(audio_bytes):
     try:
-        model_name = st.session_state.valid_model_name
-        model = genai.GenerativeModel(model_name)
+        # Using 'gemini-pro' for maximum compatibility
+        model = genai.GenerativeModel("gemini-pro")
         response = model.generate_content([
             "Transcribe this audio exactly.",
             {"mime_type": "audio/webm", "data": audio_bytes}
@@ -131,14 +93,14 @@ def transcribe_audio_gemini(audio_bytes):
     except:
         return ""
 
-# --- INDEX HANDLING (VERSION 9 - FINAL) ---
-INDEX_NAME = "faiss_index_v9"
+# --- INDEX HANDLING (VERSION 10 - STABLE) ---
+INDEX_NAME = "faiss_index_v10"
 
 def get_vector_store_batched(text_chunks):
-    # Using 'models/text-embedding-004' (Newer, usually better limits)
-    embeddings = GoogleGenerativeAIEmbeddings(model="models/text-embedding-004")
+    # Using 'models/embedding-001' - The standard for this library version
+    embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
     
-    # TINY BATCH SIZE (5) TO SURVIVE FREE TIER
+    # BATCH SIZE 5 TO PREVENT CRASHES
     batch_size = 5 
     total_chunks = len(text_chunks)
     progress_text = "Vectorizing... (Auto-throttling enabled)"
@@ -146,45 +108,30 @@ def get_vector_store_batched(text_chunks):
     
     vector_store = None
     
-    # Function to add batch with retry logic
-    def add_batch_with_retry(store, batch_texts):
-        max_retries = 3
-        for attempt in range(max_retries):
-            try:
-                if store is None:
-                    if os.path.exists(INDEX_NAME):
-                        try:
-                            store = FAISS.load_local(INDEX_NAME, embeddings, allow_dangerous_deserialization=True)
-                            store.add_texts(batch_texts)
-                        except:
-                            store = FAISS.from_texts(batch_texts, embedding=embeddings)
-                    else:
-                        store = FAISS.from_texts(batch_texts, embedding=embeddings)
-                else:
-                    store.add_texts(batch_texts)
-                return store # Success
-            except Exception as e:
-                error_str = str(e).lower()
-                if "429" in error_str or "quota" in error_str:
-                    st.warning(f"Rate limit hit. Cooling down for 65 seconds... (Attempt {attempt+1}/{max_retries})")
-                    time.sleep(65) # Wait out the minute limit
-                    continue
-                else:
-                    raise e # Real error, don't retry
-        return store
-
-    # Process all chunks
     for i in range(0, total_chunks, batch_size):
         batch = text_chunks[i : i + batch_size]
         
-        vector_store = add_batch_with_retry(vector_store, batch)
+        # Retry logic for 429 errors
+        for attempt in range(3):
+            try:
+                if vector_store is None:
+                    if os.path.exists(INDEX_NAME):
+                        try:
+                            vector_store = FAISS.load_local(INDEX_NAME, embeddings, allow_dangerous_deserialization=True)
+                            vector_store.add_texts(batch)
+                        except:
+                            vector_store = FAISS.from_texts(batch, embedding=embeddings)
+                    else:
+                        vector_store = FAISS.from_texts(batch, embedding=embeddings)
+                else:
+                    vector_store.add_texts(batch)
+                break # Success, exit retry loop
+            except Exception as e:
+                time.sleep(10) # Wait 10s on error
         
-        # Update UI
         percent_complete = min(1.0, (i + batch_size) / total_chunks)
-        my_bar.progress(percent_complete, text=f"Processing... {int(percent_complete*100)}%")
-        
-        # Standard safety sleep
-        time.sleep(1.0)
+        my_bar.progress(percent_complete, text=f"Vectorizing... {int(percent_complete*100)}%")
+        time.sleep(2.0) # Safety delay
         
     if vector_store:
         vector_store.save_local(INDEX_NAME)
@@ -197,9 +144,8 @@ def get_conversational_chain():
     Question: {question}
     Answer:
     """
-    # USE THE DETECTED MODEL NAME
-    model_name = st.session_state.valid_model_name
-    model = ChatGoogleGenerativeAI(model=model_name, temperature=0.3)
+    # STABLE MODEL: gemini-pro
+    model = ChatGoogleGenerativeAI(model="gemini-pro", temperature=0.3)
     prompt = PromptTemplate(template=prompt_template, input_variables=["context", "question"])
     return load_qa_chain(model, chain_type="stuff", prompt=prompt)
 
@@ -218,10 +164,6 @@ with st.sidebar:
     st.image("https://cdn-icons-png.flaticon.com/512/4712/4712035.png", width=64)
     st.title("CampusMind")
     selected = option_menu("Nav", ["Student Chat", "Admin Portal"], icons=['chat', 'cloud'], default_index=0)
-    
-    st.markdown("---")
-    st.caption("DEBUG INFO:")
-    st.caption(f"Using Model: `{st.session_state.valid_model_name}`")
 
 # ==========================================
 # PAGE 1: CHAT
@@ -250,7 +192,7 @@ if selected == "Student Chat":
     if user_question:
         with st.spinner("Thinking..."):
             try:
-                embeddings = GoogleGenerativeAIEmbeddings(model="models/text-embedding-004")
+                embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
                 if os.path.exists(INDEX_NAME):
                     new_db = FAISS.load_local(INDEX_NAME, embeddings, allow_dangerous_deserialization=True)
                     docs = new_db.similarity_search(user_question)
@@ -271,7 +213,7 @@ if selected == "Admin Portal":
     
     if st.button("Upload"):
         if pdf_docs:
-            with st.spinner("Starting processing..."):
+            with st.spinner("Processing..."):
                 raw_text = ""
                 for pdf in pdf_docs:
                     with pdfplumber.open(pdf) as f:
