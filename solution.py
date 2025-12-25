@@ -8,21 +8,21 @@ import io
 import os
 import time
 
-# --- HYBRID IMPORTS ---
-# OpenAI for Brain & Vectors
+# --- STANDARD IMPORTS ---
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain_openai import OpenAIEmbeddings, ChatOpenAI
+from langchain_openai import OpenAIEmbeddings
 from langchain_community.vectorstores import FAISS
+from langchain_openai import ChatOpenAI
 from langchain.chains.question_answering import load_qa_chain
 from langchain_core.prompts import PromptTemplate 
 
-# Google for Audio (Gemini)
-import google.generativeai as genai
-
-# Google for Drive
+# Google Drive & Auth
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
+
+# Google Gemini (For Audio)
+import google.generativeai as genai
 
 # ==========================================
 # 0. THEME ENGINE (Force Dark Mode)
@@ -52,11 +52,11 @@ force_dark_mode()
 st.set_page_config(page_title="CampusMind AI", page_icon="🎓", layout="wide")
 
 try:
-    # 1. OpenAI Key (The Brain)
+    # 1. OpenAI Key (Brain)
     if "OPENAI_API_KEY" in st.secrets: 
         os.environ["OPENAI_API_KEY"] = st.secrets["OPENAI_API_KEY"]
     
-    # 2. Google Key (The Ears)
+    # 2. Google Key (Ears)
     if "GOOGLE_API_KEY" in st.secrets:
         os.environ["GOOGLE_API_KEY"] = st.secrets["GOOGLE_API_KEY"]
         genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
@@ -65,7 +65,7 @@ try:
 except FileNotFoundError: st.error("🚨 Secrets file not found!")
 
 # ==========================================
-# 2. HACKATHON WINNING CSS (FINAL)
+# 2. HACKATHON WINNING CSS (EXACT COPY)
 # ==========================================
 st.markdown("""
 <style>
@@ -262,7 +262,7 @@ def upload_to_drive(file_path, file_name):
         return file.get('id')
     except Exception as e: return f"Error: {e}"
 
-# --- GLOBAL SHARED MEMORY FOR CIRCULARS ---
+# --- SHARED MEMORY ---
 class GlobalMemory:
     def __init__(self):
         self.files = []
@@ -273,7 +273,6 @@ def get_global_memory():
     return GlobalMemory()
 
 def update_global_files_from_drive():
-    """Fetches from drive and updates global memory."""
     memory = get_global_memory()
     try:
         if "gcp_service_account" in st.secrets:
@@ -284,75 +283,54 @@ def update_global_files_from_drive():
             results = service.files().list(q=query, pageSize=3, fields="files(id, name, createdTime)", orderBy="createdTime desc", supportsAllDrives=True, includeItemsFromAllDrives=True).execute()
             memory.files = results.get('files', [])
             memory.last_updated = time.time()
-    except:
-        pass
+    except: pass
 
-# Initialize memory on startup if empty
 if not get_global_memory().files:
     update_global_files_from_drive()
 
-# --- GOOGLE GEMINI AUDIO TRANSCRIPTION (THE HYBRID PART) ---
+# --- HYBRID AUDIO: GEMINI FLASH ---
 def transcribe_audio_gemini(audio_bytes):
     try:
-        # Uses Google's Native Flash Model for Audio (Fast & Free)
         model = genai.GenerativeModel("gemini-1.5-flash")
         response = model.generate_content([
             "Transcribe this audio exactly. Output only the text.",
             {"mime_type": "audio/webm", "data": audio_bytes}
         ])
         return response.text
-    except Exception as e:
+    except:
         return ""
 
-# --- OPENAI BACKEND FOR BRAIN (PRESERVED) ---
-# New Index Name for the Hybrid Version
-INDEX_NAME = "faiss_index_hybrid_vFinal"
-
+# --- OPENAI INTELLIGENCE (Vectors & Chat) ---
+# NOTE: Using OpenAI Embeddings as per your "Perfect UI" code
 def get_vector_store(text_chunks):
-    # Still using OpenAI Embeddings (Fastest)
     embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
-    
-    if os.path.exists(INDEX_NAME):
+    if os.path.exists("faiss_index"):
         try:
-            st.write("🔄 Merging into Hybrid Knowledge Base...")
-            vector_store = FAISS.load_local(INDEX_NAME, embeddings, allow_dangerous_deserialization=True)
+            st.write("🔄 Found existing knowledge base. Merging new data...")
+            vector_store = FAISS.load_local("faiss_index", embeddings, allow_dangerous_deserialization=True)
             vector_store.add_texts(text_chunks) 
             st.write("✅ Merged successfully.")
         except Exception as e:
-            st.write(f"⚠️ Creating new index...")
+            st.write(f"⚠️ Could not load existing index. Creating new one.")
             vector_store = FAISS.from_texts(text_chunks, embedding=embeddings)
     else:
-        st.write("🆕 Creating new Hybrid Knowledge Base.")
+        st.write("🆕 Creating new knowledge base.")
         vector_store = FAISS.from_texts(text_chunks, embedding=embeddings)
-    
-    vector_store.save_local(INDEX_NAME)
+    vector_store.save_local("faiss_index")
 
 def get_conversational_chain():
-    # DETECTIVE PROMPT (For Tables & Fees)
     prompt_template = """
-    You are an intelligent campus assistant. 
-    Review the Context below carefully. It contains extracted text from PDF circulars.
-    
-    IMPORTANT:
-    1. Look for Fee Tables (rows connecting 'Event' to 'Fee/Amount').
-    2. Look for Deadlines (rows connecting 'Event' to 'Date').
-    3. If the answer is in a table, read the whole row.
-    
-    Context:
-    {context}
-    
+    Answer the question based ONLY on the provided Context.
+    Context: {context}
     Question: {question}
-    
-    Answer (If you can't find it, say "I can't find specific details in the uploaded documents"):
+    Answer:
     """
-    # Using GPT-4o-mini (Smartest)
     model = ChatOpenAI(model="gpt-4o-mini", temperature=0.3)
     prompt = PromptTemplate(template=prompt_template, input_variables=["context", "question"])
     return load_qa_chain(model, chain_type="stuff", prompt=prompt)
 
 lottie_admin = load_lottieurl("https://assets2.lottiefiles.com/packages/lf20_w51pcehl.json")
 
-# 3b. SESSION STATE INIT
 if "chat_history" not in st.session_state: st.session_state.chat_history = []
 
 # ==========================================
@@ -376,7 +354,7 @@ with st.sidebar:
         }
     )
     st.markdown("---")
-    st.caption("v2.0 · Hybrid Edition (OpenAI + Google)")
+    st.caption("v2.0 · Hackathon Edition")
 
 # ==========================================
 # PAGE 1: STUDENT CHAT
@@ -395,7 +373,6 @@ if selected == "Student Chat":
 
     st.markdown("##### <span style='font-weight:700; color:#fff;'>Recent Circulars</span>", unsafe_allow_html=True)
     
-    # FETCH FROM SHARED GLOBAL MEMORY
     memory = get_global_memory()
     recent_files = memory.files
         
@@ -429,7 +406,7 @@ if selected == "Student Chat":
             with c_input:
                 voice_text = ""
                 if audio:
-                    # --- HYBRID SWITCH: USE GEMINI INSTEAD OF OPENAI WHISPER ---
+                    # --- HYBRID SWAP: USING GEMINI FOR AUDIO ---
                     with st.spinner("Transcribing with Gemini..."):
                         voice_text = transcribe_audio_gemini(audio['bytes'])
                         
@@ -451,10 +428,10 @@ if selected == "Student Chat":
         with st.spinner("🧠 Analyzing your question..."):
             try:
                 embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
-                if os.path.exists(INDEX_NAME):
-                    new_db = FAISS.load_local(INDEX_NAME, embeddings, allow_dangerous_deserialization=True)
+                if os.path.exists("faiss_index"):
+                    new_db = FAISS.load_local("faiss_index", embeddings, allow_dangerous_deserialization=True)
                     
-                    # k=12 to catch split tables (The Fix)
+                    # k=12 for robust table reading
                     docs = new_db.similarity_search(user_question, k=12)
                     
                     chain = get_conversational_chain()
@@ -523,7 +500,7 @@ if selected == "Admin Portal":
                 for pdf in pdf_docs:
                     with pdfplumber.open(pdf) as pdf_file:
                         for page in pdf_file.pages:
-                            # Standard extract for better flow
+                            # Standard extract for clean data flow
                             t = page.extract_text()
                             if t: text += t
                     with open(pdf.name, "wb") as f: f.write(pdf.getbuffer())
@@ -535,7 +512,7 @@ if selected == "Admin Portal":
                 for pdf in pdf_docs:
                     memory.files.insert(0, {"name": pdf.name, "id": "local_upload"})
                 
-                # --- CHUNK SIZE 3000 FIX FOR TABLES ---
+                # CHUNK SIZE 3000 (To fix the table issue)
                 text_splitter = RecursiveCharacterTextSplitter(chunk_size=3000, chunk_overlap=200)
                 chunks = text_splitter.split_text(text)
                 get_vector_store(chunks)
@@ -547,6 +524,7 @@ if selected == "Admin Portal":
             st.warning("Please select at least one PDF file.")
     st.markdown('</div>', unsafe_allow_html=True)
 
+    # Button CSS Injection
     st.markdown("""
     <script>
         const buttons = window.parent.document.querySelectorAll('button');
