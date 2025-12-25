@@ -71,21 +71,19 @@ st.markdown("""
     ::-webkit-scrollbar { width: 10px; }
     ::-webkit-scrollbar-track { background: #050913; }
     ::-webkit-scrollbar-thumb { background: #00C853; border-radius: 10px; }
-    ::-webkit-scrollbar-thumb:hover { background: #00e676; }
 
-    /* GLOBAL LAYOUT */
+    /* LAYOUT */
     .block-container {
         padding-top: 2rem !important;
         padding-bottom: 3rem !important;
         max-width: 1200px !important;
-        animation: pageFadeIn 0.5s ease-out;
+        animation: pageFadeIn 0.6s ease-out;
     }
     @keyframes pageFadeIn {
-        from { opacity: 0; transform: translateY(10px); }
+        from { opacity: 0; transform: translateY(15px); }
         to { opacity: 1; transform: translateY(0); }
     }
 
-    /* APP BACKGROUND */
     .stApp {
         background: radial-gradient(circle at top left, #1a2a4f 0, #050913 40%, #000000 100%);
         color: #f5f7fb !important;
@@ -94,130 +92,120 @@ st.markdown("""
 
     /* SIDEBAR */
     section[data-testid="stSidebar"] {
-        background: rgba(5, 9, 19, 0.85);
+        background: rgba(5, 9, 19, 0.95);
         border-right: 1px solid rgba(255, 255, 255, 0.05);
         backdrop-filter: blur(20px);
     }
-    .sidebar-title { font-weight: 800; font-size: 24px; letter-spacing: 0.05em; color: #fff; }
+    .sidebar-title { font-weight: 800; font-size: 24px; color: #fff; letter-spacing: 0.05em; }
     .sidebar-subtitle { font-size: 12px; color: rgba(255,255,255,0.6); letter-spacing: 0.1em; text-transform: uppercase; }
 
-    /* SHIMMER TEXT */
+    /* SHIMMER TITLE */
     .shimmer-text {
         font-weight: 800;
-        background: linear-gradient(120deg, #ffffff 20%, #00ffc3 50%, #00C853 80%);
+        background: linear-gradient(120deg, #ffffff 30%, #00ffc3 50%, #00C853 70%);
         background-size: 200% auto;
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
-        animation: shine 5s linear infinite;
-        text-shadow: 0 0 20px rgba(0, 200, 83, 0.3);
+        animation: shine 6s linear infinite;
+        text-shadow: 0 0 30px rgba(0, 200, 83, 0.2);
     }
     @keyframes shine { to { background-position: 200% center; } }
 
-    .hero-tagline { font-size: 17px; color: rgba(235, 241, 255, 0.8); line-height: 1.6; }
+    .hero-tagline { font-size: 18px; color: rgba(235, 241, 255, 0.9); line-height: 1.6; }
+    
     .hero-badge {
-        display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px;
-        border-radius: 999px; background: rgba(0, 200, 83, 0.1);
-        border: 1px solid rgba(0, 255, 140, 0.2); font-size: 12px; font-weight: 600;
-        text-transform: uppercase; letter-spacing: 0.1em; color: #00ffc3; margin-bottom: 12px;
+        display: inline-flex; align-items: center; gap: 8px; padding: 6px 16px;
+        border-radius: 999px; background: rgba(0, 200, 83, 0.15);
+        border: 1px solid rgba(0, 255, 140, 0.3); font-size: 12px; font-weight: 700;
+        text-transform: uppercase; letter-spacing: 0.1em; color: #00ffc3; margin-bottom: 16px;
     }
 
-    /* NAVIGATION PILLS */
+    /* NAVIGATION */
     .nav-link {
-        border-radius: 8px !important; margin: 4px 0 !important; padding: 0.6rem 1rem !important;
+        border-radius: 8px !important; margin: 4px 0 !important;
         font-size: 15px !important; font-weight: 500 !important; color: #c0c7df !important;
         transition: all 0.2s ease-out !important;
     }
-    .nav-link:hover {
-        background: rgba(255, 255, 255, 0.05) !important; color: #fff !important;
-    }
+    .nav-link:hover { background: rgba(255, 255, 255, 0.08) !important; color: #fff !important; }
     .nav-link-selected {
         background: linear-gradient(135deg, #00C853, #009624) !important;
-        color: #ffffff !important; box-shadow: 0 4px 12px rgba(0, 200, 83, 0.3);
+        color: #ffffff !important; box-shadow: 0 4px 15px rgba(0, 200, 83, 0.4);
     }
 
-    /* SEARCH BAR */
+    /* INPUTS */
     .stTextInput input {
         background: rgba(255, 255, 255, 0.05) !important; color: #fff !important;
-        border-radius: 12px; padding: 14px 18px 14px 50px; font-size: 16px;
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        transition: all 0.2s ease;
+        border-radius: 12px; padding: 16px 20px 16px 50px; font-size: 16px;
+        border: 1px solid rgba(255, 255, 255, 0.1); transition: all 0.2s ease;
     }
     .stTextInput input:focus {
         border-color: #00C853 !important; background: rgba(0, 200, 83, 0.05) !important;
-        box-shadow: 0 0 0 3px rgba(0, 200, 83, 0.2);
+        box-shadow: 0 0 0 3px rgba(0, 200, 83, 0.25);
     }
 
     /* MIC BUTTON */
     div[data-testid="stButton"] button {
-        border-radius: 12px !important; width: 50px; height: 50px;
+        border-radius: 12px !important; width: 54px; height: 54px;
         background: linear-gradient(135deg, #00C853, #009624);
         border: none; color: #fff; font-size: 24px;
-        transition: all 0.2s ease; box-shadow: 0 4px 12px rgba(0, 200, 83, 0.3);
+        box-shadow: 0 6px 15px rgba(0, 200, 83, 0.3);
     }
-    div[data-testid="stButton"] button:hover {
-        transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0, 200, 83, 0.4);
-    }
+    div[data-testid="stButton"] button:hover { transform: translateY(-2px); }
 
-    /* --- BULLETPROOF BUTTON FIX --- */
-    .stButton button {
+    /* PROCESS BUTTON (Strict Width Fix) */
+    .stButton button.process-btn {
         white-space: nowrap !important;
         width: auto !important;
+        min-width: 250px !important; /* Forces it to be wide enough */
         display: inline-flex !important;
         align-items: center !important;
         justify-content: center !important;
+        padding: 14px 32px !important; 
+        font-size: 16px; font-weight: 700;
+        background: linear-gradient(135deg, #00C853, #00e676); color: white;
+        border-radius: 12px !important; border: none;
+        box-shadow: 0 8px 25px rgba(0, 200, 83, 0.3);
     }
+    .stButton button.process-btn:hover { transform: translateY(-3px); box-shadow: 0 12px 30px rgba(0, 200, 83, 0.4); }
 
-    /* PROCESS BUTTON */
-    .stButton button.process-btn {
-        border-radius: 12px !important; min-width: 220px !important;
-        padding: 14px 36px !important; font-size: 16px; font-weight: 700; letter-spacing: 0.05em;
-        background: linear-gradient(135deg, #00C853, #00e676); color: white; border: none;
-        box-shadow: 0 8px 20px rgba(0, 200, 83, 0.3); transition: all 0.2s ease;
-    }
-    .stButton button.process-btn:hover {
-        transform: translateY(-3px); box-shadow: 0 12px 28px rgba(0, 200, 83, 0.4);
-    }
-
-    /* GLASS CARDS */
+    /* CARDS */
     .glass-card {
-        background: rgba(255, 255, 255, 0.03);
-        backdrop-filter: blur(20px); border-radius: 16px;
-        border: 1px solid rgba(255, 255, 255, 0.08); padding: 24px; margin-bottom: 20px;
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(25px);
+        border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.08); padding: 24px;
+        transition: transform 0.2s ease;
     }
-    .glass-card:hover {
-        transform: translateY(-5px); box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5);
-        border-color: rgba(0, 200, 83, 0.3);
-    }
+    .glass-card:hover { transform: translateY(-5px); border-color: rgba(0, 200, 83, 0.4); }
 
-    /* ANSWER BOX */
+    /* ANSWER BOX (Self-contained) */
     .answer-box-container {
-        background: rgba(0, 200, 83, 0.05);
-        border-radius: 16px; border: 2px solid #00C853;
-        padding: 24px; margin-top: 30px; color: #ffffff !important;
-        box-shadow: 0 12px 36px rgba(0, 200, 83, 0.15);
+        background: rgba(0, 200, 83, 0.04);
+        border-radius: 16px;
+        border: 2px solid #00C853; 
+        padding: 24px;
+        margin-top: 30px;
+        color: #ffffff !important;
+        box-shadow: 0 0 50px rgba(0, 200, 83, 0.1);
+        position: relative;
     }
-    .answer-title { color: #00ffc3; font-size: 20px; font-weight: 800; display: flex; align-items: center; gap: 10px; }
-    .answer-sub { font-size: 13px; color: rgba(255,255,255,0.7); margin-top: 4px; }
+    .answer-title { color: #00ffc3; font-size: 20px; font-weight: 800; display: flex; align-items: center; gap: 12px; }
+    .answer-content { font-size: 17px; line-height: 1.7; margin-top: 15px; color: #eef2f6; }
 
-    /* CHAT HISTORY */
+    /* HISTORY */
     .history-card {
-        background: rgba(255, 255, 255, 0.03); border-radius: 16px;
+        background: rgba(255, 255, 255, 0.02); border-radius: 16px;
         border: 1px solid rgba(255, 255, 255, 0.08); padding: 16px;
-        max-height: 300px; overflow-y: auto;
+        max-height: 350px; overflow-y: auto;
     }
     .history-item {
-        padding: 10px 14px; background: rgba(255, 255, 255, 0.05);
+        padding: 12px 16px; background: rgba(255, 255, 255, 0.04);
         border-radius: 10px; margin-bottom: 10px; font-size: 14px;
     }
-    .history-item .label { font-weight: 700; font-size: 12px; color: #00ffc3; text-transform: uppercase; }
     
     .chip {
-        display: inline-flex; align-items: center; padding: 6px 12px; border-radius: 999px;
+        display: inline-flex; align-items: center; padding: 6px 14px; border-radius: 999px;
         border: 1px solid rgba(255,255,255,0.1); font-size: 13px; color: #fff;
-        gap: 8px; background: rgba(255,255,255,0.05); font-weight: 500;
+        gap: 8px; background: rgba(255,255,255,0.05);
     }
-
     #MainMenu {visibility: hidden;} footer {visibility: hidden;}
 </style>
 """, unsafe_allow_html=True)
@@ -230,11 +218,6 @@ def load_lottieurl(url):
         r = requests.get(url, timeout=3)
         return r.json() if r.status_code == 200 else None
     except: return None
-
-def stream_text(text):
-    for word in text.split(" "):
-        yield word + " "
-        time.sleep(0.04)
 
 def upload_to_drive(file_path, file_name):
     try:
@@ -276,8 +259,11 @@ def get_conversational_chain():
     return load_qa_chain(model, chain_type="stuff", prompt=prompt)
 
 # --- ASSETS ---
-# ✅ FIX: New, Reliable Futuristic AI Lottie Animation
+# 1. Primary Lottie Animation (Verified Working)
 lottie_student_ai = load_lottieurl("https://lottie.host/60064060-2763-4393-8767-815716067708/3b336163-7407-4603-8003-160071663768.json")
+# 2. Fallback Static Image (High Res Futuristic AI)
+fallback_image = "https://img.freepik.com/premium-photo/futuristic-robot-artificial-intelligence-concept_31965-3856.jpg"
+
 lottie_admin = load_lottieurl("https://assets2.lottiefiles.com/packages/lf20_w51pcehl.json")
 
 # 3b. SESSION STATE
@@ -312,19 +298,26 @@ with st.sidebar:
 # ==========================================
 if selected == "Student Chat":
     
-    col1, col2 = st.columns([1, 2])
+    # --- HERO SECTION (FIXED: LARGER IMAGE) ---
+    col1, col2 = st.columns([1, 1.2]) # Adjusted ratio to make image prominent
+    
     with col1:
+        # LOGIC: Try Lottie, if None, show Image
         if lottie_student_ai:
-            st_lottie(lottie_student_ai, height=240, key="hero_anim")
+            st_lottie(lottie_student_ai, height=300, key="hero_anim") # Increased Height
+        else:
+            st.image(fallback_image, width=350)
+            
     with col2:
-        st.markdown("<div style='display:flex;flex-direction:column;justify-content:center;height:240px;'>", unsafe_allow_html=True)
+        st.markdown("<div style='display:flex;flex-direction:column;justify-content:center;height:300px;'>", unsafe_allow_html=True)
         st.markdown("<div class='hero-badge'>⚡ Campus-ready · 24/7</div>", unsafe_allow_html=True)
-        st.markdown("<h1 class='shimmer-text' style='font-size: 52px; margin-bottom: 12px; line-height: 1.1;'>CampusMind AI</h1>", unsafe_allow_html=True)
+        st.markdown("<h1 class='shimmer-text' style='font-size: 56px; margin-bottom: 12px; line-height: 1.1;'>CampusMind AI</h1>", unsafe_allow_html=True)
         st.markdown("<p class='hero-tagline'>Ask about exams, circulars, or anything on campus — get instant, tailored answers.</p>", unsafe_allow_html=True)
         st.markdown("</div>", unsafe_allow_html=True)
 
     st.write("")
 
+    # --- RECENT UPDATES (FIXED: VISIBLE NAMES) ---
     st.markdown("##### <span style='font-weight:700; color:#fff;'>Recent Circulars</span>", unsafe_allow_html=True)
     with st.spinner("Syncing latest updates..."):
         recent_files = get_recent_circulars()
@@ -333,11 +326,13 @@ if selected == "Student Chat":
         c1, c2, c3 = st.columns(3)
         cols = [c1, c2, c3]
         for i, file in enumerate(recent_files):
+            # Ensure name exists, fallback if not
+            fname = file.get('name', 'Untitled Circular')
             with cols[i]:
                 st.markdown(f"""
                 <div class="glass-card">
-                    <div style="color: #00ffc3; font-weight: 700; font-size: 14px; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px;">New Circular</div>
-                    <div style="font-size: 16px; font-weight: 600; color: #ffffff; line-height: 1.4;">{file['name'][:40]}...</div>
+                    <div style="color: #00ffc3; font-weight: 700; font-size: 13px; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 10px;">New Circular</div>
+                    <div style="font-size: 15px; font-weight: 600; color: #ffffff; line-height: 1.4; text-shadow: 0 1px 2px rgba(0,0,0,0.5);">{fname[:45]}...</div>
                 </div>
                 """, unsafe_allow_html=True)
     else:
@@ -345,6 +340,7 @@ if selected == "Student Chat":
 
     st.markdown("<br>", unsafe_allow_html=True)
 
+    # --- CHAT UI ---
     st.markdown("##### <span style='font-weight:700; color:#fff;'>💬 Ask Anything</span>", unsafe_allow_html=True)
     
     left_col, right_col = st.columns([7, 3])
@@ -387,29 +383,49 @@ if selected == "Student Chat":
                     new_db = FAISS.load_local("faiss_index", embeddings, allow_dangerous_deserialization=True)
                     docs = new_db.similarity_search(user_question)
                     chain = get_conversational_chain()
-                    response = chain.invoke({"input_documents": docs, "question": user_question}, return_only_outputs=True)
                     
-                    full_response = response['output_text']
+                    res = chain.invoke({"input_documents": docs, "question": user_question}, return_only_outputs=True)
+                    full_response = res['output_text']
+                    
                     st.session_state.chat_history.append({"role": "User", "text": user_question})
                     st.session_state.chat_history.append({"role": "AI", "text": full_response})
 
-                    # ✅ FIX: Open Container
-                    st.markdown('<div class="answer-box-container">', unsafe_allow_html=True)
+                    # --- FINAL FIX: BOX CONTENT UPDATE ---
+                    # We create one placeholder
+                    answer_placeholder = st.empty()
                     
-                    # Header Inside
-                    st.markdown("""
+                    # Accumulator for typing effect
+                    accumulated_text = ""
+                    words = full_response.split(" ")
+                    
+                    # Loop to update the HTML content INSIDE the placeholder
+                    for word in words:
+                        accumulated_text += word + " "
+                        
+                        # Re-render the ENTIRE box with new text
+                        answer_placeholder.markdown(f"""
+                        <div class="answer-box-container">
+                            <div class="answer-title">
+                                <span style="font-size: 24px;">🤖</span><span>CampusMind Answer</span>
+                            </div>
+                            <div class="answer-sub">Context-aware · From your uploaded circulars</div>
+                            <hr style="border-color: rgba(0, 200, 83, 0.3); margin: 16px 0;">
+                            <div class="answer-content">{accumulated_text}▌</div>
+                        </div>
+                        """, unsafe_allow_html=True)
+                        time.sleep(0.04) # Typing speed
+                    
+                    # Final render without cursor
+                    answer_placeholder.markdown(f"""
+                    <div class="answer-box-container">
                         <div class="answer-title">
                             <span style="font-size: 24px;">🤖</span><span>CampusMind Answer</span>
                         </div>
                         <div class="answer-sub">Context-aware · From your uploaded circulars</div>
                         <hr style="border-color: rgba(0, 200, 83, 0.3); margin: 16px 0;">
+                        <div class="answer-content">{full_response}</div>
+                    </div>
                     """, unsafe_allow_html=True)
-                    
-                    # ✅ FIX: Stream Text Inside
-                    st.write_stream(stream_text(full_response))
-                    
-                    # ✅ FIX: Close Container
-                    st.markdown('</div>', unsafe_allow_html=True)
                     
                 else:
                     st.warning("⚠️ Knowledge base empty. Please upload circulars in the Admin Portal.")
@@ -433,6 +449,7 @@ if selected == "Admin Portal":
     
     st.write("")
     
+    # Button with specific ID for styling
     if st.button("Process & Upload", key="process_btn", help="Click to process and upload documents"):
         if pdf_docs:
             with st.status("Processing...", expanded=True):
@@ -456,7 +473,7 @@ if selected == "Admin Portal":
             st.warning("Please select at least one PDF file.")
     st.markdown('</div>', unsafe_allow_html=True)
 
-    # ✅ FIX: Inject Class for Button Styling
+    # Inject Class
     st.markdown("""
     <script>
         const buttons = window.parent.document.querySelectorAll('button');
