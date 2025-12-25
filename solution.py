@@ -57,7 +57,7 @@ try:
 except FileNotFoundError: st.error("🚨 Secrets file not found!")
 
 # ==========================================
-# 2. HACKATHON WINNING CSS (FINAL)
+# 2. HACKATHON WINNING CSS (FINAL POLISH)
 # ==========================================
 st.markdown("""
 <style>
@@ -67,8 +67,8 @@ st.markdown("""
         font-family: 'Inter', sans-serif;
     }
 
-    /* SCROLLBAR */
-    ::-webkit-scrollbar { width: 8px; }
+    /* CUSTOM SCROLLBAR */
+    ::-webkit-scrollbar { width: 10px; }
     ::-webkit-scrollbar-track { background: #050913; }
     ::-webkit-scrollbar-thumb { background: #00C853; border-radius: 10px; }
 
@@ -77,10 +77,10 @@ st.markdown("""
         padding-top: 2rem !important;
         padding-bottom: 3rem !important;
         max-width: 1200px !important;
-        animation: pageFadeIn 0.5s ease-out;
+        animation: pageFadeIn 0.6s ease-out;
     }
     @keyframes pageFadeIn {
-        from { opacity: 0; transform: translateY(10px); }
+        from { opacity: 0; transform: translateY(15px); }
         to { opacity: 1; transform: translateY(0); }
     }
 
@@ -92,30 +92,32 @@ st.markdown("""
 
     /* SIDEBAR */
     section[data-testid="stSidebar"] {
-        background: rgba(5, 9, 19, 0.9);
+        background: rgba(5, 9, 19, 0.95);
         border-right: 1px solid rgba(255, 255, 255, 0.05);
         backdrop-filter: blur(20px);
     }
-    .sidebar-title { font-weight: 800; font-size: 24px; color: #fff; }
+    .sidebar-title { font-weight: 800; font-size: 24px; color: #fff; letter-spacing: 0.05em; }
     .sidebar-subtitle { font-size: 12px; color: rgba(255,255,255,0.6); letter-spacing: 0.1em; text-transform: uppercase; }
 
-    /* SHIMMER TEXT */
+    /* SHIMMER TITLE */
     .shimmer-text {
         font-weight: 800;
-        background: linear-gradient(120deg, #ffffff 20%, #00ffc3 50%, #00C853 80%);
+        background: linear-gradient(120deg, #ffffff 30%, #00ffc3 50%, #00C853 70%);
         background-size: 200% auto;
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
-        animation: shine 5s linear infinite;
+        animation: shine 6s linear infinite;
+        text-shadow: 0 0 30px rgba(0, 200, 83, 0.2);
     }
     @keyframes shine { to { background-position: 200% center; } }
 
-    .hero-tagline { font-size: 17px; color: rgba(235, 241, 255, 0.8); line-height: 1.6; }
+    .hero-tagline { font-size: 18px; color: rgba(235, 241, 255, 0.9); line-height: 1.6; }
+    
     .hero-badge {
-        display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px;
-        border-radius: 999px; background: rgba(0, 200, 83, 0.1);
-        border: 1px solid rgba(0, 255, 140, 0.2); font-size: 12px; font-weight: 600;
-        text-transform: uppercase; letter-spacing: 0.1em; color: #00ffc3; margin-bottom: 12px;
+        display: inline-flex; align-items: center; gap: 8px; padding: 6px 16px;
+        border-radius: 999px; background: rgba(0, 200, 83, 0.15);
+        border: 1px solid rgba(0, 255, 140, 0.3); font-size: 12px; font-weight: 700;
+        text-transform: uppercase; letter-spacing: 0.1em; color: #00ffc3; margin-bottom: 16px;
     }
 
     /* NAVIGATION */
@@ -124,83 +126,83 @@ st.markdown("""
         font-size: 15px !important; font-weight: 500 !important; color: #c0c7df !important;
         transition: all 0.2s ease-out !important;
     }
-    .nav-link:hover { background: rgba(255, 255, 255, 0.05) !important; color: #fff !important; }
+    .nav-link:hover { background: rgba(255, 255, 255, 0.08) !important; color: #fff !important; }
     .nav-link-selected {
         background: linear-gradient(135deg, #00C853, #009624) !important;
-        color: #ffffff !important; box-shadow: 0 4px 12px rgba(0, 200, 83, 0.3);
+        color: #ffffff !important; box-shadow: 0 4px 15px rgba(0, 200, 83, 0.4);
     }
 
     /* INPUTS */
     .stTextInput input {
         background: rgba(255, 255, 255, 0.05) !important; color: #fff !important;
-        border-radius: 12px; padding: 14px 18px 14px 50px; font-size: 16px;
+        border-radius: 12px; padding: 16px 20px 16px 50px; font-size: 16px;
         border: 1px solid rgba(255, 255, 255, 0.1); transition: all 0.2s ease;
     }
     .stTextInput input:focus {
         border-color: #00C853 !important; background: rgba(0, 200, 83, 0.05) !important;
-        box-shadow: 0 0 0 3px rgba(0, 200, 83, 0.2);
+        box-shadow: 0 0 0 3px rgba(0, 200, 83, 0.25);
     }
 
-    /* BUTTONS */
+    /* MIC BUTTON */
     div[data-testid="stButton"] button {
-        border-radius: 12px !important; width: 50px; height: 50px;
+        border-radius: 12px !important; width: 54px; height: 54px;
         background: linear-gradient(135deg, #00C853, #009624);
         border: none; color: #fff; font-size: 24px;
-        box-shadow: 0 4px 12px rgba(0, 200, 83, 0.3);
+        box-shadow: 0 6px 15px rgba(0, 200, 83, 0.3);
     }
     div[data-testid="stButton"] button:hover { transform: translateY(-2px); }
 
-    /* PROCESS BUTTON & ALIGNMENT FIX */
-    .stButton button {
+    /* PROCESS BUTTON (Strict Width Fix) */
+    .stButton button.process-btn {
         white-space: nowrap !important;
         width: auto !important;
+        min-width: 250px !important; /* Forces it to be wide enough */
         display: inline-flex !important;
         align-items: center !important;
         justify-content: center !important;
-    }
-    .stButton button.process-btn {
-        border-radius: 12px !important; min-width: 220px !important;
-        padding: 14px 36px !important; font-size: 16px; font-weight: 700;
+        padding: 14px 32px !important; 
+        font-size: 16px; font-weight: 700;
         background: linear-gradient(135deg, #00C853, #00e676); color: white;
-        box-shadow: 0 8px 20px rgba(0, 200, 83, 0.3);
+        border-radius: 12px !important; border: none;
+        box-shadow: 0 8px 25px rgba(0, 200, 83, 0.3);
     }
-    .stButton button.process-btn:hover { transform: translateY(-3px); }
+    .stButton button.process-btn:hover { transform: translateY(-3px); box-shadow: 0 12px 30px rgba(0, 200, 83, 0.4); }
 
     /* CARDS */
     .glass-card {
-        background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(20px);
+        background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(25px);
         border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.08); padding: 24px;
         transition: transform 0.2s ease;
     }
-    .glass-card:hover { transform: translateY(-5px); border-color: rgba(0, 200, 83, 0.3); }
+    .glass-card:hover { transform: translateY(-5px); border-color: rgba(0, 200, 83, 0.4); }
 
-    /* ANSWER BOX CSS */
+    /* ANSWER BOX (Self-contained) */
     .answer-box-container {
-        background: rgba(0, 200, 83, 0.06);
+        background: rgba(0, 200, 83, 0.04);
         border-radius: 16px;
-        border: 2px solid #00C853; /* The Green Border */
+        border: 2px solid #00C853; 
         padding: 24px;
         margin-top: 30px;
         color: #ffffff !important;
-        box-shadow: 0 0 40px rgba(0, 200, 83, 0.1);
+        box-shadow: 0 0 50px rgba(0, 200, 83, 0.1);
         position: relative;
     }
-    .answer-title { color: #00ffc3; font-size: 20px; font-weight: 800; display: flex; align-items: center; gap: 10px; }
-    .answer-content { font-size: 16px; line-height: 1.6; margin-top: 15px; color: #e0e6ed; }
+    .answer-title { color: #00ffc3; font-size: 20px; font-weight: 800; display: flex; align-items: center; gap: 12px; }
+    .answer-content { font-size: 17px; line-height: 1.7; margin-top: 15px; color: #eef2f6; }
 
     /* HISTORY */
     .history-card {
-        background: rgba(255, 255, 255, 0.03); border-radius: 16px;
+        background: rgba(255, 255, 255, 0.02); border-radius: 16px;
         border: 1px solid rgba(255, 255, 255, 0.08); padding: 16px;
-        max-height: 300px; overflow-y: auto;
+        max-height: 350px; overflow-y: auto;
     }
     .history-item {
-        padding: 10px 14px; background: rgba(255, 255, 255, 0.05);
+        padding: 12px 16px; background: rgba(255, 255, 255, 0.04);
         border-radius: 10px; margin-bottom: 10px; font-size: 14px;
     }
     
     .chip {
-        display: inline-flex; align-items: center; padding: 6px 12px; border-radius: 999px;
+        display: inline-flex; align-items: center; padding: 6px 14px; border-radius: 999px;
         border: 1px solid rgba(255,255,255,0.1); font-size: 13px; color: #fff;
         gap: 8px; background: rgba(255,255,255,0.05);
     }
@@ -257,9 +259,9 @@ def get_conversational_chain():
     return load_qa_chain(model, chain_type="stuff", prompt=prompt)
 
 # --- ASSETS ---
-# 1. Primary Lottie Animation (Robot)
+# 1. Primary Lottie Animation (Verified Working)
 lottie_student_ai = load_lottieurl("https://lottie.host/60064060-2763-4393-8767-815716067708/3b336163-7407-4603-8003-160071663768.json")
-# 2. Fallback Static Image (Futuristic AI) - Used if Lottie fails
+# 2. Fallback Static Image (High Res Futuristic AI)
 fallback_image = "https://img.freepik.com/premium-photo/futuristic-robot-artificial-intelligence-concept_31965-3856.jpg"
 
 lottie_admin = load_lottieurl("https://assets2.lottiefiles.com/packages/lf20_w51pcehl.json")
@@ -296,25 +298,26 @@ with st.sidebar:
 # ==========================================
 if selected == "Student Chat":
     
-    # --- HERO SECTION ---
-    col1, col2 = st.columns([1, 2])
+    # --- HERO SECTION (FIXED: LARGER IMAGE) ---
+    col1, col2 = st.columns([1, 1.2]) # Adjusted ratio to make image prominent
+    
     with col1:
         # LOGIC: Try Lottie, if None, show Image
         if lottie_student_ai:
-            st_lottie(lottie_student_ai, height=240, key="hero_anim")
+            st_lottie(lottie_student_ai, height=300, key="hero_anim") # Increased Height
         else:
-            st.image(fallback_image, width=240) # Fallback guarantees an image
+            st.image(fallback_image, width=350)
             
     with col2:
-        st.markdown("<div style='display:flex;flex-direction:column;justify-content:center;height:240px;'>", unsafe_allow_html=True)
+        st.markdown("<div style='display:flex;flex-direction:column;justify-content:center;height:300px;'>", unsafe_allow_html=True)
         st.markdown("<div class='hero-badge'>⚡ Campus-ready · 24/7</div>", unsafe_allow_html=True)
-        st.markdown("<h1 class='shimmer-text' style='font-size: 52px; margin-bottom: 12px; line-height: 1.1;'>CampusMind AI</h1>", unsafe_allow_html=True)
+        st.markdown("<h1 class='shimmer-text' style='font-size: 56px; margin-bottom: 12px; line-height: 1.1;'>CampusMind AI</h1>", unsafe_allow_html=True)
         st.markdown("<p class='hero-tagline'>Ask about exams, circulars, or anything on campus — get instant, tailored answers.</p>", unsafe_allow_html=True)
         st.markdown("</div>", unsafe_allow_html=True)
 
     st.write("")
 
-    # --- RECENT UPDATES ---
+    # --- RECENT UPDATES (FIXED: VISIBLE NAMES) ---
     st.markdown("##### <span style='font-weight:700; color:#fff;'>Recent Circulars</span>", unsafe_allow_html=True)
     with st.spinner("Syncing latest updates..."):
         recent_files = get_recent_circulars()
@@ -323,11 +326,13 @@ if selected == "Student Chat":
         c1, c2, c3 = st.columns(3)
         cols = [c1, c2, c3]
         for i, file in enumerate(recent_files):
+            # Ensure name exists, fallback if not
+            fname = file.get('name', 'Untitled Circular')
             with cols[i]:
                 st.markdown(f"""
                 <div class="glass-card">
-                    <div style="color: #00ffc3; font-weight: 700; font-size: 14px; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px;">New Circular</div>
-                    <div style="font-size: 16px; font-weight: 600; color: #ffffff; line-height: 1.4;">{file['name'][:40]}...</div>
+                    <div style="color: #00ffc3; font-weight: 700; font-size: 13px; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 10px;">New Circular</div>
+                    <div style="font-size: 15px; font-weight: 600; color: #ffffff; line-height: 1.4; text-shadow: 0 1px 2px rgba(0,0,0,0.5);">{fname[:45]}...</div>
                 </div>
                 """, unsafe_allow_html=True)
     else:
@@ -379,26 +384,25 @@ if selected == "Student Chat":
                     docs = new_db.similarity_search(user_question)
                     chain = get_conversational_chain()
                     
-                    # Get response
                     res = chain.invoke({"input_documents": docs, "question": user_question}, return_only_outputs=True)
                     full_response = res['output_text']
                     
                     st.session_state.chat_history.append({"role": "User", "text": user_question})
                     st.session_state.chat_history.append({"role": "AI", "text": full_response})
 
-                    # --- FIX: TYPING EFFECT INSIDE THE GREEN BOX ---
-                    # 1. Create a placeholder to hold the answer box
+                    # --- FINAL FIX: BOX CONTENT UPDATE ---
+                    # We create one placeholder
                     answer_placeholder = st.empty()
                     
-                    # 2. Build the output progressively
+                    # Accumulator for typing effect
                     accumulated_text = ""
-                    
-                    # 3. Stream logic (Manual loop to update the HTML inside the placeholder)
                     words = full_response.split(" ")
-                    for i, word in enumerate(words):
+                    
+                    # Loop to update the HTML content INSIDE the placeholder
+                    for word in words:
                         accumulated_text += word + " "
                         
-                        # Update the whole HTML block with the current text
+                        # Re-render the ENTIRE box with new text
                         answer_placeholder.markdown(f"""
                         <div class="answer-box-container">
                             <div class="answer-title">
@@ -409,9 +413,9 @@ if selected == "Student Chat":
                             <div class="answer-content">{accumulated_text}▌</div>
                         </div>
                         """, unsafe_allow_html=True)
-                        time.sleep(0.04)
+                        time.sleep(0.04) # Typing speed
                     
-                    # 4. Final render (remove cursor)
+                    # Final render without cursor
                     answer_placeholder.markdown(f"""
                     <div class="answer-box-container">
                         <div class="answer-title">
@@ -445,6 +449,7 @@ if selected == "Admin Portal":
     
     st.write("")
     
+    # Button with specific ID for styling
     if st.button("Process & Upload", key="process_btn", help="Click to process and upload documents"):
         if pdf_docs:
             with st.status("Processing...", expanded=True):
@@ -468,6 +473,7 @@ if selected == "Admin Portal":
             st.warning("Please select at least one PDF file.")
     st.markdown('</div>', unsafe_allow_html=True)
 
+    # Inject Class
     st.markdown("""
     <script>
         const buttons = window.parent.document.querySelectorAll('button');
