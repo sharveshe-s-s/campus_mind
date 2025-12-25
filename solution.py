@@ -51,13 +51,16 @@ force_dark_mode()
 # ==========================================
 st.set_page_config(page_title="CampusMind AI", page_icon="🎓", layout="wide")
 
+# --- INITIALIZE SESSION STATE ---
+if "chat_history" not in st.session_state: st.session_state.chat_history = []
+
 try:
     if "OPENAI_API_KEY" in st.secrets: os.environ["OPENAI_API_KEY"] = st.secrets["OPENAI_API_KEY"]
     DRIVE_FOLDER_ID = '1IRAXoxny14JvI6UbJ1zPyUduwlzm5Egm' 
 except FileNotFoundError: st.error("🚨 Secrets file not found!")
 
 # ==========================================
-# 2. HACKATHON WINNING CSS (PERFECTED)
+# 2. HACKATHON WINNING CSS (FINAL)
 # ==========================================
 st.markdown("""
 <style>
@@ -254,11 +257,11 @@ def upload_to_drive(file_path, file_name):
         return file.get('id')
     except Exception as e: return f"Error: {e}"
 
-# --- KEY FIX: REMOVED CACHING FOR REAL-TIME UPDATES ---
+# --- FIX: NO CACHING, PURE REAL-TIME FETCH ---
 def get_recent_circulars():
     """
-    Fetches directly from Drive every time. No caching.
-    Ensures everyone sees new files instantly after refresh.
+    Fetches the latest 3 circulars directly from Drive.
+    No caching ensures all users see new files instantly (after Drive indexes them).
     """
     try:
         if "gcp_service_account" in st.secrets:
@@ -266,7 +269,7 @@ def get_recent_circulars():
             creds = service_account.Credentials.from_service_account_info(key_dict, scopes=['https://www.googleapis.com/auth/drive'])
             service = build('drive', 'v3', credentials=creds)
             query = f"'{DRIVE_FOLDER_ID}' in parents and trashed=false"
-            # Sort by createdTime descending to get the newest first
+            # Order by createdTime descending to get the newest items
             results = service.files().list(q=query, pageSize=3, fields="files(id, name, createdTime)", orderBy="createdTime desc", supportsAllDrives=True, includeItemsFromAllDrives=True).execute()
             return results.get('files', [])
     except: 
@@ -304,8 +307,6 @@ def get_conversational_chain():
     return load_qa_chain(model, chain_type="stuff", prompt=prompt)
 
 lottie_admin = load_lottieurl("https://assets2.lottiefiles.com/packages/lf20_w51pcehl.json")
-
-if "chat_history" not in st.session_state: st.session_state.chat_history = []
 
 # ==========================================
 # 4. SIDEBAR
@@ -347,21 +348,25 @@ if selected == "Student Chat":
 
     st.markdown("##### <span style='font-weight:700; color:#fff;'>Recent Circulars</span>", unsafe_allow_html=True)
     
-    # FETCH REAL-TIME DATA (No cache)
-    recent_files = get_recent_circulars()
+    # FETCH REAL-TIME DATA
+    # No caching used, so every page load fetches fresh data from Drive
+    with st.spinner("Syncing latest updates..."):
+        recent_files = get_recent_circulars()
         
     if recent_files:
         c1, c2, c3 = st.columns(3)
         cols = [c1, c2, c3]
         for i, file in enumerate(recent_files):
-            fname = file.get('name', 'Untitled Circular')
-            with cols[i]:
-                st.markdown(f"""
-                <div class="glass-card">
-                    <div style="color: #00ffc3; font-weight: 700; font-size: 13px; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 10px;">New Circular</div>
-                    <div style="font-size: 15px; font-weight: 600; color: #ffffff !important; line-height: 1.4; word-wrap: break-word;">{fname[:50]}...</div>
-                </div>
-                """, unsafe_allow_html=True)
+            # Ensure index doesn't exceed 3 columns
+            if i < 3:
+                fname = file.get('name', 'Untitled Circular')
+                with cols[i]:
+                    st.markdown(f"""
+                    <div class="glass-card">
+                        <div style="color: #00ffc3; font-weight: 700; font-size: 13px; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 10px;">New Circular</div>
+                        <div style="font-size: 15px; font-weight: 600; color: #ffffff !important; line-height: 1.4; word-wrap: break-word;">{fname[:50]}...</div>
+                    </div>
+                    """, unsafe_allow_html=True)
     else:
         st.info("No recent circulars uploaded yet. Try asking general campus questions!")
 
@@ -480,11 +485,13 @@ if selected == "Admin Portal":
                     upload_to_drive(pdf.name, pdf.name)
                     if os.path.exists(pdf.name): os.remove(pdf.name)
                 
-                # Small delay to ensure Google Drive processes the file metadata before we fetch it again
-                time.sleep(2)
+                # --- FIX: FORCED DELAY FOR GOOGLE INDEXING ---
+                # This ensures that when the page reloads, the file is likely available in the list
+                time.sleep(4) 
 
                 text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
                 chunks = text_splitter.split_text(text)
+                
                 get_vector_store(chunks)
                 
                 st.success("✅ Knowledge base updated successfully!")
