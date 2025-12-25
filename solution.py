@@ -83,8 +83,8 @@ if not get_global_memory().files:
 # --- GEMINI FUNCTIONS ---
 def transcribe_audio_gemini(audio_bytes):
     try:
-        # Fallback to the most standard model for audio if Flash fails
-        model = genai.GenerativeModel("gemini-1.5-flash")
+        # CHANGED: Use 'gemini-pro' for compatibility
+        model = genai.GenerativeModel("gemini-pro")
         response = model.generate_content([
             "Transcribe this audio exactly.",
             {"mime_type": "audio/webm", "data": audio_bytes}
@@ -93,12 +93,12 @@ def transcribe_audio_gemini(audio_bytes):
     except Exception as e:
         return ""
 
-# --- INDEX HANDLING (VERSION 5 - BATCHED) ---
-INDEX_NAME = "faiss_index_v5"
+# --- INDEX HANDLING (VERSION 6 - STABLE BATCH) ---
+INDEX_NAME = "faiss_index_v6"
 
 def get_vector_store_batched(text_chunks):
-    # Use the better model
-    embeddings = GoogleGenerativeAIEmbeddings(model="models/text-embedding-004")
+    # CHANGED: Use 'models/embedding-001' which is safer for older libs
+    embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
     
     # BATCHING LOGIC TO PREVENT 429 ERRORS
     batch_size = 20
@@ -114,7 +114,6 @@ def get_vector_store_batched(text_chunks):
         
         # Create or Add to Vector Store
         if vector_store is None:
-            # First batch creates the store
             if os.path.exists(INDEX_NAME):
                 try:
                     vector_store = FAISS.load_local(INDEX_NAME, embeddings, allow_dangerous_deserialization=True)
@@ -124,15 +123,14 @@ def get_vector_store_batched(text_chunks):
             else:
                 vector_store = FAISS.from_texts(batch, embedding=embeddings)
         else:
-            # Subsequent batches just add text
             vector_store.add_texts(batch)
         
         # Update Progress Bar
         percent_complete = min(1.0, (i + batch_size) / total_chunks)
         my_bar.progress(percent_complete, text=f"Vectorizing... {int(percent_complete*100)}%")
         
-        # CRITICAL: Wait to respect Rate Limits
-        time.sleep(1.5)
+        # Wait to respect Rate Limits
+        time.sleep(2.0)
         
     vector_store.save_local(INDEX_NAME)
     my_bar.empty()
@@ -144,8 +142,8 @@ def get_conversational_chain():
     Question: {question}
     Answer:
     """
-    # Use gemini-1.5-flash for speed and context
-    model = ChatGoogleGenerativeAI(model="gemini-1.5-flash", temperature=0.3)
+    # CHANGED: Use 'gemini-pro' - Guaranteed to work
+    model = ChatGoogleGenerativeAI(model="gemini-pro", temperature=0.3)
     prompt = PromptTemplate(template=prompt_template, input_variables=["context", "question"])
     return load_qa_chain(model, chain_type="stuff", prompt=prompt)
 
@@ -194,7 +192,8 @@ if selected == "Student Chat":
     if user_question:
         with st.spinner("Thinking..."):
             try:
-                embeddings = GoogleGenerativeAIEmbeddings(model="models/text-embedding-004")
+                # Use 'embedding-001' to match the index
+                embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
                 if os.path.exists(INDEX_NAME):
                     new_db = FAISS.load_local(INDEX_NAME, embeddings, allow_dangerous_deserialization=True)
                     docs = new_db.similarity_search(user_question)
