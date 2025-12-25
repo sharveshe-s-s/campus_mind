@@ -52,12 +52,11 @@ force_dark_mode()
 st.set_page_config(page_title="CampusMind AI", page_icon="🎓", layout="wide")
 
 try:
-    # 1. OpenAI Key (Brain)
     if "OPENAI_API_KEY" in st.secrets: 
         os.environ["OPENAI_API_KEY"] = st.secrets["OPENAI_API_KEY"]
     
-    # 2. Google Key (Ears)
     if "GOOGLE_API_KEY" in st.secrets:
+        # We set this for the genai library to pick up
         os.environ["GOOGLE_API_KEY"] = st.secrets["GOOGLE_API_KEY"]
         genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
 
@@ -152,7 +151,7 @@ st.markdown("""
         color: #ffffff !important; box-shadow: 0 4px 15px rgba(0, 200, 83, 0.4);
     }
 
-    /* INPUTS */
+    /* INPUTS (This is what fixes the white box issue) */
     .stTextInput input {
         background: rgba(255, 255, 255, 0.05) !important; color: #fff !important;
         border-radius: 8px; padding: 16px 20px 16px 50px; font-size: 16px;
@@ -262,7 +261,7 @@ def upload_to_drive(file_path, file_name):
         return file.get('id')
     except Exception as e: return f"Error: {e}"
 
-# --- SHARED MEMORY ---
+# --- GLOBAL SHARED MEMORY FOR CIRCULARS ---
 class GlobalMemory:
     def __init__(self):
         self.files = []
@@ -273,6 +272,7 @@ def get_global_memory():
     return GlobalMemory()
 
 def update_global_files_from_drive():
+    """Fetches from drive and updates global memory."""
     memory = get_global_memory()
     try:
         if "gcp_service_account" in st.secrets:
@@ -283,14 +283,17 @@ def update_global_files_from_drive():
             results = service.files().list(q=query, pageSize=3, fields="files(id, name, createdTime)", orderBy="createdTime desc", supportsAllDrives=True, includeItemsFromAllDrives=True).execute()
             memory.files = results.get('files', [])
             memory.last_updated = time.time()
-    except: pass
+    except:
+        pass
 
+# Initialize memory on startup if empty
 if not get_global_memory().files:
     update_global_files_from_drive()
 
-# --- HYBRID AUDIO: GEMINI FLASH ---
+# --- GEMINI AUDIO TRANSCRIPTION (THE ONLY CHANGE) ---
 def transcribe_audio_gemini(audio_bytes):
     try:
+        # Uses Gemini 1.5 Flash (Free & Fast)
         model = genai.GenerativeModel("gemini-1.5-flash")
         response = model.generate_content([
             "Transcribe this audio exactly. Output only the text.",
@@ -301,7 +304,6 @@ def transcribe_audio_gemini(audio_bytes):
         return ""
 
 # --- OPENAI INTELLIGENCE (Vectors & Chat) ---
-# NOTE: Using OpenAI Embeddings as per your "Perfect UI" code
 def get_vector_store(text_chunks):
     embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
     if os.path.exists("faiss_index"):
@@ -331,6 +333,7 @@ def get_conversational_chain():
 
 lottie_admin = load_lottieurl("https://assets2.lottiefiles.com/packages/lf20_w51pcehl.json")
 
+# 3b. SESSION STATE INIT
 if "chat_history" not in st.session_state: st.session_state.chat_history = []
 
 # ==========================================
@@ -373,6 +376,7 @@ if selected == "Student Chat":
 
     st.markdown("##### <span style='font-weight:700; color:#fff;'>Recent Circulars</span>", unsafe_allow_html=True)
     
+    # FETCH FROM SHARED GLOBAL MEMORY
     memory = get_global_memory()
     recent_files = memory.files
         
@@ -406,9 +410,10 @@ if selected == "Student Chat":
             with c_input:
                 voice_text = ""
                 if audio:
-                    # --- HYBRID SWAP: USING GEMINI FOR AUDIO ---
-                    with st.spinner("Transcribing with Gemini..."):
+                    # --- HYBRID CHANGE START ---
+                    with st.spinner("Transcribing..."):
                         voice_text = transcribe_audio_gemini(audio['bytes'])
+                    # --- HYBRID CHANGE END ---
                         
                 default_val = voice_text if voice_text else ""
                 user_question = st.text_input("Search", value=default_val, placeholder="Ex: When are the exams? What does the latest circular say?", label_visibility="collapsed")
@@ -431,7 +436,7 @@ if selected == "Student Chat":
                 if os.path.exists("faiss_index"):
                     new_db = FAISS.load_local("faiss_index", embeddings, allow_dangerous_deserialization=True)
                     
-                    # k=12 for robust table reading
+                    # k=12 to catch split tables (Essential for Fees)
                     docs = new_db.similarity_search(user_question, k=12)
                     
                     chain = get_conversational_chain()
@@ -500,19 +505,18 @@ if selected == "Admin Portal":
                 for pdf in pdf_docs:
                     with pdfplumber.open(pdf) as pdf_file:
                         for page in pdf_file.pages:
-                            # Standard extract for clean data flow
                             t = page.extract_text()
                             if t: text += t
                     with open(pdf.name, "wb") as f: f.write(pdf.getbuffer())
                     upload_to_drive(pdf.name, pdf.name)
                     if os.path.exists(pdf.name): os.remove(pdf.name)
                 
-                # Update Memory
+                # UPDATE MEMORY
                 memory = get_global_memory()
                 for pdf in pdf_docs:
                     memory.files.insert(0, {"name": pdf.name, "id": "local_upload"})
                 
-                # CHUNK SIZE 3000 (To fix the table issue)
+                # BIG CHUNK SIZE (3000) TO FIX TABLE READING
                 text_splitter = RecursiveCharacterTextSplitter(chunk_size=3000, chunk_overlap=200)
                 chunks = text_splitter.split_text(text)
                 get_vector_store(chunks)
@@ -524,7 +528,6 @@ if selected == "Admin Portal":
             st.warning("Please select at least one PDF file.")
     st.markdown('</div>', unsafe_allow_html=True)
 
-    # Button CSS Injection
     st.markdown("""
     <script>
         const buttons = window.parent.document.querySelectorAll('button');
