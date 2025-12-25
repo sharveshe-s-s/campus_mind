@@ -61,8 +61,12 @@ In modern campuses, critical information is often buried in hundreds of emails, 
 git clone [https://github.com/sharveshe-s-s/campus_mind.git](https://github.com/sharveshe-s-s/campus_mind.git)
 cd campusmind-ai
 
-2. Install DependenciesBashpip install -r requirements.txt
-3. Configure SecretsCreate a folder named .streamlit in the root directory and add a file named secrets.toml.You need to add your OpenAI API Key and your Google Service Account JSON..streamlit/secrets.toml Format:Ini, TOMLOPENAI_API_KEY = "sk-proj-..."
+2. Install Dependencies
+Bash
+pip install -r requirements.txt
+
+3. Configure Secrets
+Create a folder named .streamlit in the root directory and add a file named secrets.toml.You need to add your OpenAI API Key and your Google Service Account JSON..streamlit/secrets.toml Format:Ini, TOMLOPENAI_API_KEY = "sk-proj-..."
 
 [gcp_service_account]
 type = "service_account"
@@ -75,4 +79,5 @@ auth_uri = "[https://accounts.google.com/o/oauth2/auth](https://accounts.google.
 token_uri = "[https://oauth2.googleapis.com/token](https://oauth2.googleapis.com/token)"
 auth_provider_x509_cert_url = "[https://www.googleapis.com/oauth2/v1/certs](https://www.googleapis.com/oauth2/v1/certs)"
 client_x509_cert_url = "..."
+
 4. Run the AppBashstreamlit run app.py
