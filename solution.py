@@ -8,25 +8,21 @@ import io
 import os
 import time
 
-# --- STANDARD IMPORTS ---
+# --- HYBRID IMPORTS ---
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain_openai import OpenAIEmbeddings
+from langchain_openai import OpenAIEmbeddings, ChatOpenAI
 from langchain_community.vectorstores import FAISS
-from langchain_openai import ChatOpenAI
 from langchain.chains.question_answering import load_qa_chain
 from langchain_core.prompts import PromptTemplate 
 
-# Google Drive & Auth
+# Google for Audio (Gemini)
+import google.generativeai as genai
+from google.generativeai.types import HarmCategory, HarmBlockThreshold
+
+# Google for Drive
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
-
-# OpenAI Client
-from openai import OpenAI
-
-# --- NEW: Google Gemini for Audio ---
-import google.generativeai as genai
-from google.generativeai.types import HarmCategory, HarmBlockThreshold
 
 # ==========================================
 # 0. THEME ENGINE
@@ -67,7 +63,7 @@ try:
 except FileNotFoundError: st.error("🚨 Secrets file not found!")
 
 # ==========================================
-# 2. HACKATHON WINNING CSS
+# 2. HACKATHON WINNING CSS (EXACT COPY)
 # ==========================================
 st.markdown("""
 <style>
@@ -254,15 +250,12 @@ if not get_global_memory().files:
 def transcribe_audio_gemini(audio_bytes):
     try:
         model = genai.GenerativeModel("gemini-1.5-flash")
-        
-        # Disable safety settings to prevent random blocks on audio
         safety_settings = {
             HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
             HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE,
             HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_NONE,
             HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
         }
-
         response = model.generate_content(
             [
                 "Transcribe this audio exactly. Output only the English text.",
@@ -313,23 +306,10 @@ def get_conversational_chain():
 
 lottie_admin = load_lottieurl("https://assets2.lottiefiles.com/packages/lf20_w51pcehl.json")
 
-# --- SESSION STATE & CALLBACKS ---
+# --- SESSION STATE ---
 if "chat_history" not in st.session_state: st.session_state.chat_history = []
 if "user_query" not in st.session_state: st.session_state.user_query = ""
-
-# THE FIX: Direct Session State Access Callback
-def audio_callback():
-    # 'recorder' is the key used in mic_recorder
-    if st.session_state.recorder:
-        audio_bytes = st.session_state.recorder['bytes']
-        try:
-            # Show a small toast notification that we are working
-            st.toast("🎙️ Processing Audio with Gemini...", icon="⚡")
-            text = transcribe_audio_gemini(audio_bytes)
-            if text:
-                st.session_state.user_query = text
-        except:
-            pass
+if "prev_audio_id" not in st.session_state: st.session_state.prev_audio_id = None
 
 # ==========================================
 # 4. SIDEBAR
@@ -400,14 +380,21 @@ if selected == "Student Chat":
         with st.container():
             c_mic, c_input = st.columns([1, 8])
             with c_mic:
-                # --- ROBUST CALLBACK CONFIG ---
-                mic_recorder(
-                    start_prompt="🎙️", 
-                    stop_prompt="⏹️", 
-                    key='recorder',
-                    format="webm",
-                    on_recorder_factory=audio_callback # The secret weapon for reliability
-                )
+                # 1. FIXED MIC COMPONENT (Standard arguments only)
+                audio = mic_recorder(start_prompt="🎙️", stop_prompt="⏹️", key='recorder', format="webm")
+                
+                # 2. HIDDEN AUDIO PROCESSOR
+                if audio:
+                    # Check if this specific audio ID has already been processed
+                    if audio.get('id') != st.session_state.prev_audio_id:
+                        st.session_state.prev_audio_id = audio.get('id')
+                        
+                        with st.spinner("Transcribing..."):
+                            text = transcribe_audio_gemini(audio['bytes'])
+                            if text:
+                                st.session_state.user_query = text
+                                st.rerun() # FORCE REFRESH TO SHOW TEXT
+
             with c_input:
                 user_question = st.text_input(
                     "Search", 
