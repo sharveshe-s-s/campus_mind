@@ -289,7 +289,7 @@ if not get_global_memory().files:
 # --- GOOGLE GEMINI FOR TRANSCRIPTION ---
 def transcribe_audio_gemini(audio_bytes):
     try:
-        # Use Gemini 1.5 Flash which is natively multimodal (can hear!)
+        # Use Gemini 1.5 Flash which is natively multimodal
         model = genai.GenerativeModel("gemini-1.5-flash")
         response = model.generate_content([
             "Please transcribe what is said in this audio. Output ONLY the transcription text, nothing else.",
@@ -307,10 +307,13 @@ def get_vector_store(text_chunks):
     # Using Google's Text Embedding model
     embeddings = GoogleGenerativeAIEmbeddings(model="models/text-embedding-004")
     
-    if os.path.exists("faiss_index"):
+    # CHANGED NAME TO "faiss_index_google" TO AVOID CONFLICT WITH OLD OPENAI INDEX
+    index_name = "faiss_index_google"
+
+    if os.path.exists(index_name):
         try:
             st.write("🔄 Found existing knowledge base. Merging new data...")
-            vector_store = FAISS.load_local("faiss_index", embeddings, allow_dangerous_deserialization=True)
+            vector_store = FAISS.load_local(index_name, embeddings, allow_dangerous_deserialization=True)
             vector_store.add_texts(text_chunks) 
             st.write("✅ Merged successfully.")
         except Exception as e:
@@ -320,7 +323,7 @@ def get_vector_store(text_chunks):
         st.write("🆕 Creating new knowledge base.")
         vector_store = FAISS.from_texts(text_chunks, embedding=embeddings)
     
-    vector_store.save_local("faiss_index")
+    vector_store.save_local(index_name)
 
 def get_conversational_chain():
     prompt_template = """
@@ -412,7 +415,6 @@ if selected == "Student Chat":
                 voice_text = ""
                 if audio:
                     with st.spinner("Transcribing with Gemini..."):
-                        # Send audio bytes to Gemini 1.5 Flash
                         voice_text = transcribe_audio_gemini(audio['bytes'])
                         
                 default_val = voice_text if voice_text else ""
@@ -432,10 +434,13 @@ if selected == "Student Chat":
     if user_question:
         with st.spinner("🧠 Analyzing your question with Gemini 1.5..."):
             try:
-                # Use Google Embeddings here
                 embeddings = GoogleGenerativeAIEmbeddings(model="models/text-embedding-004")
-                if os.path.exists("faiss_index"):
-                    new_db = FAISS.load_local("faiss_index", embeddings, allow_dangerous_deserialization=True)
+                
+                # USE NEW INDEX NAME
+                index_name = "faiss_index_google"
+
+                if os.path.exists(index_name):
+                    new_db = FAISS.load_local(index_name, embeddings, allow_dangerous_deserialization=True)
                     docs = new_db.similarity_search(user_question)
                     chain = get_conversational_chain()
                     
