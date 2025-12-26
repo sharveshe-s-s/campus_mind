@@ -25,7 +25,7 @@ import google.generativeai as genai
 from google.generativeai.types import HarmCategory, HarmBlockThreshold
 
 # ==========================================
-# 0. THEME ENGINE (Force Dark Mode)
+# 0. THEME ENGINE
 # ==========================================
 def force_dark_mode():
     config_dir = ".streamlit"
@@ -63,7 +63,7 @@ try:
 except FileNotFoundError: st.error("🚨 Secrets file not found!")
 
 # ==========================================
-# 2. HACKATHON WINNING CSS (FULL PREMIUM)
+# 2. HACKATHON WINNING CSS (PREMIUM UI)
 # ==========================================
 st.markdown("""
 <style>
@@ -105,129 +105,89 @@ st.markdown("""
     .sidebar-title { font-weight: 800; font-size: 24px; color: #fff; letter-spacing: 0.05em; }
     .sidebar-subtitle { font-size: 12px; color: rgba(255,255,255,0.6); letter-spacing: 0.1em; text-transform: uppercase; }
 
-    /* CENTERED HERO TITLE */
+    /* HERO */
     .hero-container {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        text-align: center;
-        padding: 50px 0 40px 0;
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        text-align: center; padding: 40px 0 30px 0;
     }
     .shimmer-text {
-        font-weight: 800;
-        font-size: 64px;
+        font-weight: 800; font-size: 56px;
         background: linear-gradient(120deg, #ffffff 30%, #00ffc3 50%, #00C853 70%);
         background-size: 200% auto;
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        animation: shine 6s linear infinite;
-        text-shadow: 0 0 30px rgba(0, 200, 83, 0.2);
-        margin: 15px 0;
-        line-height: 1.1;
+        -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        animation: shine 6s linear infinite; text-shadow: 0 0 30px rgba(0, 200, 83, 0.2);
+        margin: 10px 0; line-height: 1.1;
     }
     @keyframes shine { to { background-position: 200% center; } }
-
-    .hero-tagline { font-size: 20px; color: rgba(235, 241, 255, 0.9); max-width: 700px; margin: 0 auto; }
     
     .hero-badge {
-        display: inline-flex; align-items: center; gap: 8px; padding: 8px 20px;
-        border-radius: 8px;
-        background: rgba(0, 200, 83, 0.15);
-        border: 1px solid rgba(0, 255, 140, 0.3); font-size: 13px; font-weight: 700;
+        display: inline-flex; align-items: center; gap: 8px; padding: 6px 16px;
+        border-radius: 8px; background: rgba(0, 200, 83, 0.15);
+        border: 1px solid rgba(0, 255, 140, 0.3); font-size: 12px; font-weight: 700;
         text-transform: uppercase; letter-spacing: 0.1em; color: #00ffc3;
     }
-
-    /* NAVIGATION PILLS */
-    .nav-link {
-        border-radius: 6px !important; margin: 4px 0 !important;
-        font-size: 15px !important; font-weight: 500 !important; color: #c0c7df !important;
-        transition: all 0.2s ease-out !important;
-    }
-    .nav-link:hover { background: rgba(255, 255, 255, 0.08) !important; color: #fff !important; }
-    .nav-link-selected {
-        background: linear-gradient(135deg, #00C853, #009624) !important;
-        color: #ffffff !important; box-shadow: 0 4px 15px rgba(0, 200, 83, 0.4);
-    }
-
-    /* INPUTS */
-    .stTextInput input {
-        background: rgba(255, 255, 255, 0.05) !important; color: #fff !important;
-        border-radius: 8px; padding: 16px 20px 16px 50px; font-size: 16px;
-        border: 1px solid rgba(255, 255, 255, 0.1); transition: all 0.2s ease;
-    }
-    .stTextInput input:focus {
-        border-color: #00C853 !important; background: rgba(0, 200, 83, 0.05) !important;
-        box-shadow: 0 0 0 3px rgba(0, 200, 83, 0.25);
-    }
-
-    /* NATIVE AUDIO INPUT STYLING */
-    div[data-testid="stAudioInput"] {
-        background: rgba(255, 255, 255, 0.05);
-        border-radius: 12px;
-        padding: 10px;
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        color: white;
-    }
-    div[data-testid="stAudioInput"] button {
-        background-color: #00C853 !important;
-        color: white !important;
-        border: none !important;
-    }
-
-    /* RECTANGLE BUTTON FIX (ADMIN) */
-    .stButton button {
-        white-space: nowrap !important;
-        width: auto !important;
-        display: inline-flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-        border-radius: 8px !important;
-    }
-    
-    .stButton button.process-btn {
-        min-width: 300px !important;
-        padding: 14px 40px !important; 
-        font-size: 16px; font-weight: 700;
-        background: linear-gradient(135deg, #00C853, #00e676); color: white;
-        border: none;
-        box-shadow: 0 8px 25px rgba(0, 200, 83, 0.3);
-    }
-    .stButton button.process-btn:hover { transform: translateY(-3px); box-shadow: 0 12px 30px rgba(0, 200, 83, 0.4); }
 
     /* GLASS CARDS */
     .glass-card {
         background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(25px);
-        border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.08); padding: 24px;
-        transition: transform 0.2s ease;
-        color: #ffffff !important; 
+        border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.08); padding: 20px;
+        transition: transform 0.2s ease; color: #ffffff !important; 
     }
     .glass-card:hover { transform: translateY(-5px); border-color: rgba(0, 200, 83, 0.4); }
 
+    /* --- GEMINI-LIKE INPUT BAR --- */
+    .stTextInput input {
+        background: rgba(255, 255, 255, 0.05) !important; color: #fff !important;
+        border-radius: 25px; /* Rounded pill shape like Gemini */
+        padding: 15px 25px; font-size: 16px;
+        border: 1px solid rgba(255, 255, 255, 0.1); transition: all 0.2s ease;
+    }
+    .stTextInput input:focus {
+        border-color: #00C853 !important; background: rgba(0, 200, 83, 0.05) !important;
+        box-shadow: 0 0 0 2px rgba(0, 200, 83, 0.25);
+    }
+
+    /* AUDIO WIDGET INTEGRATION */
+    /* This makes the audio widget look like a button next to the text box */
+    div[data-testid="stAudioInput"] {
+        background: transparent !important;
+        border: none !important;
+        padding: 5px !important;
+        margin-top: 5px !important;
+    }
+    div[data-testid="stAudioInput"] button {
+        background: rgba(255, 255, 255, 0.1) !important;
+        border-radius: 50% !important;
+        width: 50px !important;
+        height: 50px !important;
+        color: #00C853 !important;
+        border: 1px solid rgba(255,255,255,0.1) !important;
+        display: flex; align-items: center; justify-content: center;
+    }
+    div[data-testid="stAudioInput"] button:hover {
+        background: rgba(0, 200, 83, 0.2) !important;
+        border-color: #00C853 !important;
+    }
+
     /* ANSWER BOX */
     .answer-box-container {
-        background: rgba(0, 200, 83, 0.04);
-        border-radius: 12px;
-        border: 2px solid #00C853; 
-        padding: 24px;
-        margin-top: 30px;
-        color: #ffffff !important;
-        box-shadow: 0 0 50px rgba(0, 200, 83, 0.1);
-        position: relative;
-        word-wrap: break-word;
+        background: rgba(0, 200, 83, 0.04); border-radius: 16px; border: 1px solid rgba(0, 200, 83, 0.3);
+        padding: 30px; margin-top: 30px; color: #ffffff !important;
+        box-shadow: 0 0 60px rgba(0, 200, 83, 0.08); position: relative; word-wrap: break-word;
     }
-    .answer-title { color: #00ffc3; font-size: 20px; font-weight: 800; display: flex; align-items: center; gap: 12px; }
-    .answer-content { font-size: 17px; line-height: 1.7; margin-top: 15px; color: #eef2f6; }
+    .answer-title { color: #00ffc3; font-size: 22px; font-weight: 700; display: flex; align-items: center; gap: 12px; margin-bottom: 15px;}
+    .answer-content { font-size: 17px; line-height: 1.8; color: #eef2f6; }
 
     /* HISTORY */
     .history-card {
         background: rgba(255, 255, 255, 0.02); border-radius: 12px;
         border: 1px solid rgba(255, 255, 255, 0.08); padding: 16px;
-        max-height: 350px; overflow-y: auto;
+        max-height: 400px; overflow-y: auto;
     }
     .history-item {
         padding: 12px 16px; background: rgba(255, 255, 255, 0.04);
         border-radius: 8px; margin-bottom: 10px; font-size: 14px;
+        border-left: 3px solid #00C853;
     }
     
     .chip {
@@ -235,6 +195,15 @@ st.markdown("""
         border: 1px solid rgba(255,255,255,0.1); font-size: 13px; color: #fff;
         gap: 8px; background: rgba(255,255,255,0.05);
     }
+    
+    /* PROCESS BUTTON */
+    .stButton button.process-btn {
+        min-width: 100% !important; padding: 14px 40px !important; 
+        font-size: 16px; font-weight: 700; background: linear-gradient(135deg, #00C853, #00e676); color: white;
+        border: none; box-shadow: 0 8px 25px rgba(0, 200, 83, 0.3); border-radius: 8px;
+    }
+    .stButton button.process-btn:hover { transform: translateY(-3px); box-shadow: 0 12px 30px rgba(0, 200, 83, 0.4); }
+
     #MainMenu {visibility: hidden;} footer {visibility: hidden;}
 </style>
 """, unsafe_allow_html=True)
@@ -281,7 +250,7 @@ def update_global_files_from_drive():
 
 if not get_global_memory().files: update_global_files_from_drive()
 
-# --- INTELLIGENT MODEL SELECTOR ---
+# --- INTELLIGENT MODEL SELECTOR (SELF-HEALING) ---
 def get_valid_gemini_model():
     """Finds a working model name available to your specific API key."""
     try:
@@ -314,13 +283,14 @@ def transcribe_audio_gemini(audio_bytes):
         model_name = get_valid_gemini_model()
         model = genai.GenerativeModel(model_name)
         safety = {HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE, HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE}
+        
+        # Audio input via new method
         response = model.generate_content(
             ["Transcribe this audio exactly. Output only the English text.", {"mime_type": "audio/wav", "data": audio_bytes}],
             safety_settings=safety
         )
         return response.text
     except Exception as e: 
-        st.error(f"Gemini Error ({model_name}): {e}")
         return ""
 
 # --- OPENAI INTELLIGENCE ---
@@ -375,6 +345,7 @@ with st.sidebar:
 # PAGE 1: STUDENT CHAT
 # ==========================================
 if selected == "Student Chat":
+    
     st.markdown("""
     <div class="hero-container">
         <div class="hero-badge">⚡ Campus-ready · 24/7</div>
@@ -385,11 +356,10 @@ if selected == "Student Chat":
 
     st.write("")
 
-    st.markdown("##### <span style='font-weight:700; color:#fff;'>Recent Circulars</span>", unsafe_allow_html=True)
-    
     # Recent Circulars
     memory = get_global_memory()
     if memory.files:
+        st.markdown("##### <span style='font-weight:700; color:#fff;'>Recent Circulars</span>", unsafe_allow_html=True)
         c1, c2, c3 = st.columns(3)
         cols = [c1, c2, c3]
         for i, f in enumerate(memory.files[:3]):
@@ -401,63 +371,84 @@ if selected == "Student Chat":
                 </div>
                 """, unsafe_allow_html=True)
     
-    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown("<br><br>", unsafe_allow_html=True)
     st.markdown("##### <span style='font-weight:700; color:#fff;'>💬 Ask Anything</span>", unsafe_allow_html=True)
     
-    # --- NATIVE AUDIO INPUT + TEXT ---
-    col_audio, col_text = st.columns([1, 2])
+    # --- GEMINI-STYLE INPUT BAR ---
+    # We use columns to place the Mic next to the Text Box
+    input_col1, input_col2 = st.columns([1, 10], vertical_alignment="bottom")
     
     voice_query = ""
     
-    with col_audio:
-        st.markdown("**🎙️ Voice Search:**")
-        # Native widget blends in perfectly with dark mode
-        audio_value = st.audio_input("Record", label_visibility="collapsed")
+    with input_col1:
+        # Native Audio Input - Styled to look like a button
+        audio_value = st.audio_input("Mic", label_visibility="collapsed")
         
         if audio_value:
-            with st.spinner("Processing with Gemini..."):
+            with st.spinner(" "):
                 audio_bytes = audio_value.read()
                 voice_query = transcribe_audio_gemini(audio_bytes)
-                if voice_query:
-                    st.success(f"Heard: '{voice_query}'")
     
-    with col_text:
-        st.markdown("**⌨️ Text Search:**")
-        user_input = st.text_input("Search", value=voice_query, placeholder="Ex: When are the exams?", label_visibility="collapsed")
+    with input_col2:
+        # Text Input
+        default_val = voice_query if voice_query else ""
+        user_input = st.text_input("Text Input", value=default_val, placeholder="Ask anything about the campus...", label_visibility="collapsed")
 
-    # Logic: Prefer voice query if it exists
+    # Main Logic
     final_question = voice_query if voice_query else user_input
 
-    # HISTORY PANE
-    if "last_answered" not in st.session_state: st.session_state.last_answered = ""
-    
+    # Response Area (Two Columns: Answer | History)
+    c_left, c_right = st.columns([7, 3])
+
     if final_question:
+        if "last_answered" not in st.session_state: st.session_state.last_answered = ""
+        
         if st.session_state.last_answered != final_question:
-            with st.spinner("Thinking..."):
-                try:
-                    embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
-                    if os.path.exists("faiss_index"):
-                        new_db = FAISS.load_local("faiss_index", embeddings, allow_dangerous_deserialization=True)
-                        docs = new_db.similarity_search(final_question, k=10)
-                        chain = get_conversational_chain()
-                        res = chain.invoke({"input_documents": docs, "question": final_question}, return_only_outputs=True)
-                        
-                        st.session_state.last_answered = final_question
-                        
-                        st.markdown(f"""
-                        <div class="answer-box-container">
-                            <div class="answer-title">
-                                <span style="font-size: 24px;">🤖</span><span>CampusMind Answer</span>
+            with c_left:
+                with st.spinner("🧠 Analyzing..."):
+                    try:
+                        embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
+                        if os.path.exists("faiss_index"):
+                            new_db = FAISS.load_local("faiss_index", embeddings, allow_dangerous_deserialization=True)
+                            docs = new_db.similarity_search(final_question, k=10)
+                            chain = get_conversational_chain()
+                            res = chain.invoke({"input_documents": docs, "question": final_question}, return_only_outputs=True)
+                            
+                            st.session_state.last_answered = final_question
+                            response_text = res['output_text']
+                            
+                            # Add to History
+                            st.session_state.chat_history.append({"role": "User", "text": final_question})
+                            st.session_state.chat_history.append({"role": "AI", "text": response_text})
+                            
+                            st.markdown(f"""
+                            <div class="answer-box-container">
+                                <div class="answer-title">
+                                    <span style="font-size: 24px;">🤖</span><span>CampusMind Answer</span>
+                                </div>
+                                <div style="font-size:14px; color:rgba(255,255,255,0.5);">Context-aware • From uploaded docs</div>
+                                <hr style="border-color: rgba(0, 200, 83, 0.3); margin: 16px 0;">
+                                <div class="answer-content">{response_text}</div>
                             </div>
-                            <div class="answer-sub">Context-aware · From your uploaded circulars</div>
-                            <hr style="border-color: rgba(0, 200, 83, 0.3); margin: 16px 0;">
-                            <div class="answer-content">{res['output_text']}</div>
-                        </div>
-                        """, unsafe_allow_html=True)
-                    else:
-                        st.warning("⚠️ Knowledge base empty. Please upload circulars in the Admin Portal.")
-                except Exception as e:
-                    st.error(f"Error: {e}")
+                            """, unsafe_allow_html=True)
+                        else:
+                            st.warning("⚠️ Knowledge base empty. Please upload circulars in the Admin Portal.")
+                    except Exception as e:
+                        st.error(f"Error: {e}")
+    
+    # History Sidebar (Right Column)
+    with c_right:
+        st.markdown("<div style='height:20px'></div>", unsafe_allow_html=True) # Spacer
+        st.markdown("<div class='history-card'>", unsafe_allow_html=True)
+        st.markdown("<div style='font-weight:700; font-size:14px; color:#fff; margin-bottom:12px; letter-spacing:1px;'>RECENT TURNS</div>", unsafe_allow_html=True)
+        
+        if st.session_state.chat_history:
+            for item in reversed(st.session_state.chat_history[-4:]): # Show last 4 items
+                label = "You" if item["role"] == "User" else "AI"
+                st.markdown(f"<div class='history-item'><div style='font-size:11px; color:#00C853; font-weight:bold; margin-bottom:4px;'>{label}</div>{item['text'][:80]}...</div>", unsafe_allow_html=True)
+        else:
+            st.markdown("<div style='font-size:13px;color:rgba(255,255,255,0.6); font-style:italic;'>No history yet.</div>", unsafe_allow_html=True)
+        st.markdown("</div>", unsafe_allow_html=True)
 
 # ==========================================
 # PAGE 2: ADMIN PORTAL
@@ -476,7 +467,7 @@ if selected == "Admin Portal":
     
     st.write("")
     
-    if st.button("Process & Upload", key="process_btn", help="Click to process and upload documents"):
+    if st.button("Process & Upload", key="process_btn"):
         if pdf_docs:
             with st.status("Processing...", expanded=True):
                 text = ""
@@ -485,9 +476,7 @@ if selected == "Admin Portal":
                         for page in f.pages:
                             t = page.extract_text()
                             if t: text += t
-                    with open(pdf.name, "wb") as f: f.write(pdf.getbuffer())
                     upload_to_drive(pdf.name, pdf.name)
-                    if os.path.exists(pdf.name): os.remove(pdf.name)
                 
                 memory = get_global_memory()
                 for pdf in pdf_docs: memory.files.insert(0, {"name": pdf.name, "id": "local_upload"})
@@ -499,10 +488,9 @@ if selected == "Admin Portal":
                 st.success("✅ Knowledge base updated successfully!")
                 time.sleep(1)
                 st.rerun()
-        else:
-            st.warning("Please select at least one PDF file.")
     st.markdown('</div>', unsafe_allow_html=True)
-
+    
+    # Inject Button CSS
     st.markdown("""
     <script>
         const buttons = window.parent.document.querySelectorAll('button');
