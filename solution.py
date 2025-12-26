@@ -63,7 +63,7 @@ try:
 except FileNotFoundError: st.error("🚨 Secrets file not found!")
 
 # ==========================================
-# 2. HACKATHON CSS (UPDATED FOR AUDIO INPUT)
+# 2. HACKATHON CSS
 # ==========================================
 st.markdown("""
 <style>
@@ -136,14 +136,18 @@ if not get_global_memory().files: update_global_files_from_drive()
 def transcribe_audio_gemini(audio_bytes):
     try:
         model = genai.GenerativeModel("gemini-1.5-flash")
-        # Robust safety settings to prevent blocks
         safety = {HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE, HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE}
+        
+        # CHANGED: 'audio/wav' is safer for st.audio_input
         response = model.generate_content(
-            ["Transcribe this audio exactly. Output only the English text.", {"mime_type": "audio/webm", "data": audio_bytes}],
+            ["Transcribe this audio exactly. Output only the English text.", {"mime_type": "audio/wav", "data": audio_bytes}],
             safety_settings=safety
         )
         return response.text
-    except: return ""
+    except Exception as e: 
+        # Show specific error to help debug
+        st.error(f"Gemini Error: {e}")
+        return ""
 
 # --- OPENAI INTELLIGENCE ---
 def get_vector_store(text_chunks):
@@ -196,33 +200,36 @@ if selected == "Student Chat":
 
     st.markdown("---")
     
-    # --- NEW: NATIVE AUDIO INPUT (Bulletproof) ---
+    # --- NATIVE AUDIO INPUT ---
     col_audio, col_text = st.columns([1, 2])
     
     voice_query = ""
     
     with col_audio:
         st.markdown("**🎙️ Record Voice Query:**")
-        # This is the OFFICIAL Streamlit widget. It works 100%.
         audio_value = st.audio_input("Record")
         
         if audio_value:
-            # When recording stops, this runs immediately
             with st.spinner("Processing with Google Gemini..."):
-                # Read bytes from the uploaded audio file
+                # Read bytes
                 audio_bytes = audio_value.read()
+                # Send to Gemini
                 voice_query = transcribe_audio_gemini(audio_bytes)
+                
+                # If Gemini fails, user sees the error st.error above.
+                # If Gemini succeeds, we show what it heard.
+                if voice_query:
+                    st.success(f"Did you say: '{voice_query}'?")
     
     with col_text:
         st.markdown("**💬 Or Type:**")
-        # If we got voice, use it as default value
         user_input = st.text_input("Question", value=voice_query, placeholder="Ask about exams, fees...")
 
-    # Logic: Prefer voice query if it exists, otherwise manual input
+    # Logic: Prefer voice query if it exists
     final_question = voice_query if voice_query else user_input
 
     if final_question:
-        # Only answer if it's a new question or we just recorded
+        # Check if we already answered this exact question to prevent loop
         if "last_answered" not in st.session_state or st.session_state.last_answered != final_question:
             with st.spinner("Thinking..."):
                 try:
@@ -235,7 +242,6 @@ if selected == "Student Chat":
                         
                         st.session_state.last_answered = final_question
                         
-                        # Display Answer
                         st.markdown(f"""
                         <div class="answer-box-container">
                             <div class="answer-title">🤖 CampusMind Answer</div>
