@@ -132,43 +132,57 @@ def update_global_files_from_drive():
 
 if not get_global_memory().files: update_global_files_from_drive()
 
-# --- SELF-HEALING GEMINI TRANSCRIPTION ---
-def transcribe_audio_gemini(audio_bytes):
-    # Safety settings to prevent blocks
-    safety = {
-        HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE, 
-        HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE
-    }
-    
-    # Try 1: Standard Flash (Fastest)
+# --- INTELLIGENT MODEL SELECTOR ---
+def get_valid_gemini_model():
+    """Finds a working model name available to your specific API key."""
     try:
-        model = genai.GenerativeModel("gemini-1.5-flash")
+        # Ask Google what models we have access to
+        available_models = []
+        for m in genai.list_models():
+            if 'generateContent' in m.supported_generation_methods:
+                available_models.append(m.name)
+        
+        # Priority list (Try 1.5 Flash first, then Pro, then anything 1.5)
+        preferred_order = [
+            "models/gemini-1.5-flash",
+            "models/gemini-1.5-flash-001",
+            "models/gemini-1.5-flash-latest",
+            "models/gemini-1.5-pro",
+            "models/gemini-1.5-pro-001"
+        ]
+        
+        # Check if any preferred model is in the available list
+        for model_name in preferred_order:
+            if model_name in available_models:
+                return model_name
+                
+        # Fallback: Just return the first one that mentions '1.5'
+        for model_name in available_models:
+            if "1.5" in model_name:
+                return model_name
+                
+        # Last resort
+        return "models/gemini-1.5-flash"
+    except:
+        return "models/gemini-1.5-flash"
+
+# --- GOOGLE GEMINI AUDIO TRANSCRIPTION ---
+def transcribe_audio_gemini(audio_bytes):
+    try:
+        # Dynamic Model Selection
+        model_name = get_valid_gemini_model()
+        model = genai.GenerativeModel(model_name)
+        
+        safety = {HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE, HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE}
+        
         response = model.generate_content(
             ["Transcribe this audio exactly. Output only the English text.", {"mime_type": "audio/wav", "data": audio_bytes}],
             safety_settings=safety
         )
         return response.text
-    except:
-        # Try 2: Versioned Flash (If 404 occurs on alias)
-        try:
-            model = genai.GenerativeModel("gemini-1.5-flash-001")
-            response = model.generate_content(
-                ["Transcribe this audio exactly. Output only the English text.", {"mime_type": "audio/wav", "data": audio_bytes}],
-                safety_settings=safety
-            )
-            return response.text
-        except:
-            # Try 3: Pro (Most powerful backup)
-            try:
-                model = genai.GenerativeModel("gemini-1.5-pro")
-                response = model.generate_content(
-                    ["Transcribe this audio exactly. Output only the English text.", {"mime_type": "audio/wav", "data": audio_bytes}],
-                    safety_settings=safety
-                )
-                return response.text
-            except Exception as e:
-                st.error(f"Google AI Error: {e}")
-                return ""
+    except Exception as e: 
+        st.error(f"Gemini Error ({model_name}): {e}")
+        return ""
 
 # --- OPENAI INTELLIGENCE ---
 def get_vector_store(text_chunks):
@@ -232,9 +246,7 @@ if selected == "Student Chat":
         
         if audio_value:
             with st.spinner("Processing with Google Gemini..."):
-                # Read bytes
                 audio_bytes = audio_value.read()
-                # Send to Gemini (Self-Healing Function)
                 voice_query = transcribe_audio_gemini(audio_bytes)
                 
                 if voice_query:
