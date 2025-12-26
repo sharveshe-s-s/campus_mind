@@ -132,22 +132,43 @@ def update_global_files_from_drive():
 
 if not get_global_memory().files: update_global_files_from_drive()
 
-# --- GOOGLE GEMINI AUDIO TRANSCRIPTION ---
+# --- SELF-HEALING GEMINI TRANSCRIPTION ---
 def transcribe_audio_gemini(audio_bytes):
+    # Safety settings to prevent blocks
+    safety = {
+        HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE, 
+        HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE
+    }
+    
+    # Try 1: Standard Flash (Fastest)
     try:
         model = genai.GenerativeModel("gemini-1.5-flash")
-        safety = {HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE, HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE}
-        
-        # CHANGED: 'audio/wav' is safer for st.audio_input
         response = model.generate_content(
             ["Transcribe this audio exactly. Output only the English text.", {"mime_type": "audio/wav", "data": audio_bytes}],
             safety_settings=safety
         )
         return response.text
-    except Exception as e: 
-        # Show specific error to help debug
-        st.error(f"Gemini Error: {e}")
-        return ""
+    except:
+        # Try 2: Versioned Flash (If 404 occurs on alias)
+        try:
+            model = genai.GenerativeModel("gemini-1.5-flash-001")
+            response = model.generate_content(
+                ["Transcribe this audio exactly. Output only the English text.", {"mime_type": "audio/wav", "data": audio_bytes}],
+                safety_settings=safety
+            )
+            return response.text
+        except:
+            # Try 3: Pro (Most powerful backup)
+            try:
+                model = genai.GenerativeModel("gemini-1.5-pro")
+                response = model.generate_content(
+                    ["Transcribe this audio exactly. Output only the English text.", {"mime_type": "audio/wav", "data": audio_bytes}],
+                    safety_settings=safety
+                )
+                return response.text
+            except Exception as e:
+                st.error(f"Google AI Error: {e}")
+                return ""
 
 # --- OPENAI INTELLIGENCE ---
 def get_vector_store(text_chunks):
@@ -200,7 +221,7 @@ if selected == "Student Chat":
 
     st.markdown("---")
     
-    # --- NATIVE AUDIO INPUT ---
+    # --- NATIVE AUDIO INPUT (Reliable) ---
     col_audio, col_text = st.columns([1, 2])
     
     voice_query = ""
@@ -213,11 +234,9 @@ if selected == "Student Chat":
             with st.spinner("Processing with Google Gemini..."):
                 # Read bytes
                 audio_bytes = audio_value.read()
-                # Send to Gemini
+                # Send to Gemini (Self-Healing Function)
                 voice_query = transcribe_audio_gemini(audio_bytes)
                 
-                # If Gemini fails, user sees the error st.error above.
-                # If Gemini succeeds, we show what it heard.
                 if voice_query:
                     st.success(f"Did you say: '{voice_query}'?")
     
@@ -229,7 +248,6 @@ if selected == "Student Chat":
     final_question = voice_query if voice_query else user_input
 
     if final_question:
-        # Check if we already answered this exact question to prevent loop
         if "last_answered" not in st.session_state or st.session_state.last_answered != final_question:
             with st.spinner("Thinking..."):
                 try:
