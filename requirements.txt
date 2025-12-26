@@ -1,7 +1,6 @@
-streamlit
+streamlit>=1.40.0
 streamlit-lottie
 streamlit-option-menu
-streamlit-mic-recorder
 requests
 pdfplumber
 langchain==0.2.16
