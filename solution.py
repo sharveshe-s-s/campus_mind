@@ -12,6 +12,7 @@ def enforce_dark_mode_config():
     if not os.path.exists(config_dir):
         os.makedirs(config_dir)
     
+    # We force the theme to be dark at the server level
     config_content = """
 [theme]
 base="dark"
@@ -35,7 +36,7 @@ runOnSave=false
         with open(config_path, "w") as f:
             f.write(config_content)
 
-# Run this BEFORE anything else
+# Run this BEFORE anything else to lock the theme
 enforce_dark_mode_config()
 
 # ==========================================
@@ -83,20 +84,20 @@ def inject_premium_css():
         }
 
         /* --- 2. AUDIO WIDGET FIX (NO WHITE BOX) --- */
+        /* This targets the specific wrapper that turns white */
         div[data-testid="stAudioInput"] {
             background: transparent !important;
             border: none !important;
             padding: 0 !important;
             margin-top: 5px !important;
         }
-        /* Target the internal container to be transparent */
         div[data-testid="stAudioInput"] > div {
             background-color: transparent !important;
             color: white !important;
             border: none !important;
             box-shadow: none !important;
         }
-        /* Style the Record Button to look like a UI Element */
+        /* Style the Record Button */
         div[data-testid="stAudioInput"] button {
             background-color: rgba(255, 255, 255, 0.08) !important;
             border-radius: 50% !important;
