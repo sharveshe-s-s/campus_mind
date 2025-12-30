@@ -2,42 +2,9 @@ import streamlit as st
 import os
 
 # ==========================================
-# 0. TRIPLE-LOCK THEME ENFORCER (CRITICAL FIX)
+# 0. THEME CONFIG (Standard Light Mode)
 # ==========================================
-# This function physically writes a config file to force the server into Dark Mode.
-def enforce_dark_mode_config():
-    config_dir = ".streamlit"
-    config_path = os.path.join(config_dir, "config.toml")
-    
-    if not os.path.exists(config_dir):
-        os.makedirs(config_dir)
-    
-    # We force the theme to be dark at the server level
-    config_content = """
-[theme]
-base="dark"
-primaryColor="#00C853"
-backgroundColor="#050913"
-secondaryBackgroundColor="#0b0f1f"
-textColor="#ffffff"
-font="sans serif"
-[server]
-runOnSave=false
-    """
-    
-    # Check if config exists and has the right theme, if not, overwrite it
-    try:
-        with open(config_path, "r") as f:
-            current = f.read()
-        if 'base="dark"' not in current:
-            with open(config_path, "w") as f:
-                f.write(config_content)
-    except FileNotFoundError:
-        with open(config_path, "w") as f:
-            f.write(config_content)
-
-# Run this BEFORE anything else to lock the theme
-enforce_dark_mode_config()
+st.set_page_config(page_title="CampusMind AI", page_icon="🎓", layout="wide")
 
 # ==========================================
 # 1. IMPORTS
@@ -60,135 +27,108 @@ from googleapiclient.http import MediaFileUpload
 import google.generativeai as genai
 from google.generativeai.types import HarmCategory, HarmBlockThreshold
 
-# PAGE CONFIG
-st.set_page_config(page_title="CampusMind AI", page_icon="🎓", layout="wide")
-
 # ==========================================
-# 2. THE NUCLEAR PREMIUM CSS
+# 2. CLEAN PROFESSIONAL CSS (Black Text)
 # ==========================================
-def inject_premium_css():
+def inject_light_mode_css():
     st.markdown("""
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
         
-        /* --- 1. FORCE DARK BACKGROUND (TRIPLE LOCK) --- */
+        /* --- 1. FORCE WHITE BACKGROUND (Fail-Safe) --- */
         [data-testid="stAppViewContainer"], .stApp {
-            background: radial-gradient(circle at top left, #1a2a4f 0, #050913 40%, #000000 100%) !important;
-            color: #ffffff !important;
+            background: #ffffff !important;
+            color: #1a1a1a !important; /* DARK BLACK TEXT */
         }
-        [data-testid="stHeader"] { background: transparent !important; }
+        [data-testid="stHeader"] { background: rgba(255,255,255,0.9) !important; }
         [data-testid="stSidebar"] { 
-            background: rgba(5, 9, 19, 0.95) !important; 
-            border-right: 1px solid rgba(255, 255, 255, 0.05);
-            backdrop-filter: blur(20px);
+            background: #f8f9fa !important; 
+            border-right: 1px solid #e0e0e0;
         }
 
-        /* --- 2. AUDIO WIDGET FIX (NO WHITE BOX) --- */
-        /* This targets the specific wrapper that turns white */
+        /* --- 2. TEXT VISIBILITY (Black Text Everywhere) --- */
+        h1, h2, h3, h4, h5, h6 { color: #111111 !important; font-weight: 800 !important; }
+        p, div, span, label { color: #333333 !important; }
+        
+        /* --- 3. INPUT FIELDS (Clean Borders) --- */
+        .stTextInput input {
+            color: #000000 !important;
+            background: #ffffff !important;
+            border: 1px solid #ced4da !important;
+            border-radius: 8px !important;
+            padding: 12px !important;
+        }
+        .stTextInput input:focus {
+            border-color: #00C853 !important;
+            box-shadow: 0 0 0 2px rgba(0, 200, 83, 0.2);
+        }
+
+        /* --- 4. CARDS (Shadows instead of Transparency) --- */
+        .info-card {
+            background: #ffffff;
+            border: 1px solid #e0e0e0;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            margin-bottom: 15px;
+            transition: transform 0.2s;
+        }
+        .info-card:hover { transform: translateY(-3px); border-color: #00C853; }
+
+        /* --- 5. AUDIO WIDGET FIX --- */
+        /* Forces the audio widget to look correct on white background */
         div[data-testid="stAudioInput"] {
-            background: transparent !important;
-            border: none !important;
-            padding: 0 !important;
-            margin-top: 5px !important;
+            margin-top: 5px;
         }
-        div[data-testid="stAudioInput"] > div {
-            background-color: transparent !important;
-            color: white !important;
-            border: none !important;
-            box-shadow: none !important;
-        }
-        /* Style the Record Button */
         div[data-testid="stAudioInput"] button {
-            background-color: rgba(255, 255, 255, 0.08) !important;
-            border-radius: 50% !important;
-            width: 50px !important; height: 50px !important;
+            background-color: #f1f3f4 !important;
             color: #00C853 !important;
-            border: 1px solid rgba(255, 255, 255, 0.1) !important;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            border: 1px solid #e0e0e0 !important;
+            width: 50px; height: 50px;
+            border-radius: 50%;
             display: flex; align-items: center; justify-content: center;
         }
         div[data-testid="stAudioInput"] button:hover {
-            background-color: rgba(0, 200, 83, 0.2) !important;
-            border-color: #00C853 !important;
+            background-color: #e8f5e9 !important;
             transform: scale(1.05);
-        }
-
-        /* --- 3. HERO & TEXT STYLES --- */
-        .hero-container {
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            text-align: center; padding: 40px 0 30px 0;
-            animation: fadeIn 0.8s ease-out;
-        }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-
-        .shimmer-text {
-            font-family: 'Inter', sans-serif;
-            font-weight: 800; font-size: 56px;
-            background: linear-gradient(120deg, #ffffff 30%, #00ffc3 50%, #00C853 70%);
-            background-size: 200% auto;
-            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-            animation: shine 6s linear infinite; text-shadow: 0 0 30px rgba(0, 200, 83, 0.2);
-            margin: 10px 0; line-height: 1.1;
-        }
-        @keyframes shine { to { background-position: 200% center; } }
-
-        .hero-badge {
-            display: inline-flex; align-items: center; gap: 8px; padding: 6px 16px;
-            border-radius: 20px; background: rgba(0, 200, 83, 0.15);
-            border: 1px solid rgba(0, 255, 140, 0.3); font-size: 12px; font-weight: 700;
-            text-transform: uppercase; letter-spacing: 0.1em; color: #00ffc3 !important;
-        }
-
-        /* --- 4. GLASS CARDS --- */
-        .glass-card {
-            background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(25px);
-            border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.08); padding: 20px;
-            transition: transform 0.2s ease; color: #ffffff !important; margin-bottom: 15px;
-        }
-        .glass-card:hover { transform: translateY(-5px); border-color: rgba(0, 200, 83, 0.4); }
-
-        /* --- 5. TEXT INPUT (PILL SHAPE) --- */
-        .stTextInput input {
-            background: rgba(255, 255, 255, 0.05) !important; color: #fff !important;
-            border-radius: 30px !important; padding: 15px 25px; font-size: 16px;
-            border: 1px solid rgba(255, 255, 255, 0.1) !important;
-        }
-        .stTextInput input:focus {
-            border-color: #00C853 !important; background: rgba(0, 200, 83, 0.05) !important;
-            box-shadow: 0 0 0 2px rgba(0, 200, 83, 0.25);
         }
 
         /* --- 6. ANSWER BOX --- */
         .answer-box-container {
-            background: rgba(0, 200, 83, 0.04); border-radius: 16px; border: 1px solid rgba(0, 200, 83, 0.3);
-            padding: 30px; margin-top: 30px; color: #ffffff !important;
-            box-shadow: 0 0 60px rgba(0, 200, 83, 0.08);
+            background: #e8f5e9; /* Light Green Bg */
+            border-radius: 12px;
+            border: 1px solid #00C853;
+            padding: 25px; margin-top: 20px;
+            box-shadow: 0 4px 15px rgba(0, 200, 83, 0.1);
         }
-        .answer-title { color: #00ffc3 !important; font-size: 22px; font-weight: 700; display: flex; align-items: center; gap: 12px; margin-bottom: 15px;}
-        .answer-content { font-size: 17px; line-height: 1.8; color: #eef2f6 !important; }
+        .answer-title { color: #1b5e20 !important; font-size: 20px; font-weight: 700; display: flex; align-items: center; gap: 10px; }
+        .answer-content { font-size: 16px; line-height: 1.6; color: #1a1a1a !important; margin-top: 10px; }
 
-        /* --- 7. HISTORY SIDEBAR --- */
-        .history-card {
-            background: rgba(255, 255, 255, 0.02); border-radius: 12px;
-            border: 1px solid rgba(255, 255, 255, 0.08); padding: 16px;
-            max-height: 400px; overflow-y: auto;
+        /* --- 7. HERO TEXT --- */
+        .hero-title {
+            font-family: 'Inter', sans-serif;
+            font-size: 48px; font-weight: 800;
+            background: -webkit-linear-gradient(45deg, #1a1a1a, #43a047);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
         }
-        .history-item {
-            padding: 12px 16px; background: rgba(255, 255, 255, 0.04);
-            border-radius: 8px; margin-bottom: 10px; font-size: 14px;
-            border-left: 3px solid #00C853;
+        .hero-badge {
+            background: #e8f5e9; color: #2e7d32 !important;
+            font-weight: 700; padding: 5px 12px; border-radius: 15px;
+            font-size: 12px; border: 1px solid #c8e6c9;
+            display: inline-block; margin-bottom: 15px;
         }
-
-        /* GLOBAL TEXT OVERRIDE */
-        h1, h2, h3, h4, h5, h6, p, div, span, label { color: #ffffff !important; }
+        
+        /* HIDE FOOTER */
         #MainMenu {visibility: hidden;} footer {visibility: hidden;}
     </style>
     """, unsafe_allow_html=True)
 
-inject_premium_css()
+inject_light_mode_css()
 
 # ==========================================
-# 3. AUTH & SECRETS
+# 3. SECRETS & SETUP
 # ==========================================
 try:
     if "OPENAI_API_KEY" in st.secrets: 
@@ -200,7 +140,7 @@ try:
 except: pass
 
 # ==========================================
-# 4. LOGIC & HELPERS
+# 4. LOGIC
 # ==========================================
 def load_lottieurl(url):
     try:
@@ -241,24 +181,14 @@ def update_global_files_from_drive():
 
 if not get_global_memory().files: update_global_files_from_drive()
 
-# --- SELF HEALING MODEL SELECTOR ---
 def get_valid_gemini_model():
-    try:
-        # Priority list
-        preferred = ["models/gemini-1.5-flash", "models/gemini-1.5-flash-001", "models/gemini-1.5-pro"]
-        try:
-            available = [m.name for m in genai.list_models()]
-            for p in preferred:
-                if p in available: return p
-        except: pass
-        return "models/gemini-1.5-flash"
-    except: return "models/gemini-1.5-flash"
+    return "models/gemini-1.5-flash"
 
 def transcribe_audio_gemini(audio_bytes):
     try:
         model_name = get_valid_gemini_model()
         model = genai.GenerativeModel(model_name)
-        safety = {HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE, HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE}
+        safety = {HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE}
         response = model.generate_content(
             ["Transcribe this audio exactly. Output only the English text.", {"mime_type": "audio/wav", "data": audio_bytes}],
             safety_settings=safety
@@ -291,12 +221,12 @@ lottie_admin = load_lottieurl("https://assets2.lottiefiles.com/packages/lf20_w51
 if "chat_history" not in st.session_state: st.session_state.chat_history = []
 
 # ==========================================
-# 5. UI LAYOUT & PAGES
+# 5. UI LAYOUT
 # ==========================================
 with st.sidebar:
     st.image("https://cdn-icons-png.flaticon.com/512/4712/4712035.png", width=64)
-    st.markdown("## CampusMind")
-    st.markdown("<div style='color:rgba(255,255,255,0.6); font-size:12px; margin-bottom:20px;'>HYBRID CORE AI</div>", unsafe_allow_html=True)
+    st.markdown("### CampusMind")
+    st.caption("HYBRID AI CORE")
     
     selected = option_menu(
         "Navigation", ["Student Chat", "Admin Portal", "About"],
@@ -304,45 +234,44 @@ with st.sidebar:
         menu_icon="cast", default_index=0,
         styles={
             "container": {"background-color": "transparent", "padding": "0"},
-            "icon": {"color": "#c0c7df", "font-size": "16px"},
-            "nav-link": {"font-size": "14px", "text-align": "left", "margin": "6px 0px"},
-            "nav-link-selected": {"background-color": "#00C853"},
+            "icon": {"color": "#555", "font-size": "16px"},
+            "nav-link": {"font-size": "14px", "text-align": "left", "margin": "6px 0px", "color": "#333"},
+            "nav-link-selected": {"background-color": "#e8f5e9", "color": "#1b5e20"},
         }
     )
 
-# --- STUDENT CHAT PAGE ---
+# --- STUDENT CHAT ---
 if selected == "Student Chat":
     st.markdown("""
-    <div class="hero-container">
-        <div class="hero-badge">⚡ Campus-Ready · 24/7</div>
-        <h1 class="shimmer-text">CampusMind AI</h1>
-        <p style="color:rgba(255,255,255,0.7);">Your voice-activated guide to campus life.</p>
+    <div style="text-align:center; padding: 40px 0;">
+        <span class="hero-badge">⚡ ONLINE · 24/7</span>
+        <h1 class="hero-title">CampusMind AI</h1>
+        <p style="font-size: 18px; color: #555;">Voice-first campus intelligence.</p>
     </div>
     """, unsafe_allow_html=True)
 
     # Recent Circulars
     memory = get_global_memory()
     if memory.files:
-        st.markdown("##### <span style='color:#fff; opacity:0.9;'>Recent Circulars</span>", unsafe_allow_html=True)
+        st.markdown("##### Recent Circulars")
         cols = st.columns(3)
         for i, f in enumerate(memory.files[:3]):
             with cols[i]:
                 st.markdown(f"""
-                <div class="glass-card">
-                    <div style="color:#00ffc3; font-size:11px; font-weight:800; letter-spacing:1px; margin-bottom:8px;">NEW</div>
-                    <div style="color:#fff; font-size:13px; line-height:1.4;">{f['name'][:35]}...</div>
+                <div class="info-card">
+                    <div style="color:#00C853; font-size:11px; font-weight:800; letter-spacing:1px;">NEW UPLOAD</div>
+                    <div style="color:#111; font-weight:600; font-size:14px; margin-top:5px;">{f['name'][:30]}...</div>
                 </div>
                 """, unsafe_allow_html=True)
     
     st.markdown("<br>", unsafe_allow_html=True)
-    st.markdown("##### <span style='color:#fff; opacity:0.9;'>💬 Ask Anything</span>", unsafe_allow_html=True)
+    st.markdown("##### 💬 Ask Question")
 
-    # --- INPUT BAR (Mic + Text) ---
+    # --- INPUT ---
     c1, c2 = st.columns([1, 10], vertical_alignment="bottom")
     
     voice_query = ""
     with c1:
-        # Audio widget styling is handled by inject_premium_css
         audio_value = st.audio_input("Mic", label_visibility="collapsed")
         if audio_value:
             with st.spinner(" "):
@@ -350,18 +279,18 @@ if selected == "Student Chat":
     
     with c2:
         default_val = voice_query if voice_query else ""
-        user_input = st.text_input("Message", value=default_val, placeholder="Ex: When do exams start?", label_visibility="collapsed")
+        user_input = st.text_input("Message", value=default_val, placeholder="Ask about exams, fees, circulars...", label_visibility="collapsed")
 
     final_question = voice_query if voice_query else user_input
 
-    # --- ANSWER SECTION ---
+    # --- ANSWER ---
     col_left, col_right = st.columns([7, 3])
     if final_question:
         if "last_answered" not in st.session_state: st.session_state.last_answered = ""
         
         if st.session_state.last_answered != final_question:
             with col_left:
-                with st.spinner("Analysing..."):
+                with st.spinner("Searching documents..."):
                     try:
                         embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
                         if os.path.exists("faiss_index"):
@@ -373,59 +302,45 @@ if selected == "Student Chat":
                             st.session_state.last_answered = final_question
                             response = res['output_text']
                             
-                            # Add to history
                             st.session_state.chat_history.append({"role": "User", "text": final_question})
                             st.session_state.chat_history.append({"role": "AI", "text": response})
                             
                             st.markdown(f"""
                             <div class="answer-box-container">
-                                <div class="answer-title">
-                                    <span style="font-size: 24px;">🤖</span><span>CampusMind Answer</span>
-                                </div>
-                                <div style="font-size:13px; color:rgba(255,255,255,0.5); margin-bottom:15px;">Context-aware • From uploaded docs</div>
-                                <hr style="border-color: rgba(255,255,255,0.1); margin: 0 0 15px 0;">
+                                <div class="answer-title">🤖 CampusMind Answer</div>
                                 <div class="answer-content">{response}</div>
                             </div>
                             """, unsafe_allow_html=True)
-                        else: st.warning("Knowledge base empty. Please upload circulars in the Admin Portal.")
-                    except: st.error("I need more context to answer that.")
+                        else: st.warning("Knowledge base empty.")
+                    except: st.error("Context not found.")
     
-    # --- HISTORY SIDEBAR ---
+    # --- HISTORY ---
     with col_right:
         st.markdown("<div style='height:30px'></div>", unsafe_allow_html=True)
-        st.markdown("<div class='history-card'>", unsafe_allow_html=True)
-        st.markdown("<div style='font-weight:700; font-size:12px; color:#fff; margin-bottom:15px; letter-spacing:1px;'>RECENT CHATS</div>", unsafe_allow_html=True)
-        
+        st.markdown("<div style='padding:15px; background:#f8f9fa; border-radius:10px; border:1px solid #eee;'>", unsafe_allow_html=True)
+        st.markdown("<div style='font-weight:700; font-size:12px; color:#555; margin-bottom:10px;'>HISTORY</div>", unsafe_allow_html=True)
         if st.session_state.chat_history:
             for item in reversed(st.session_state.chat_history[-4:]): 
                 lbl = "You" if item["role"] == "User" else "AI"
-                clr = "#00C853" if lbl == "AI" else "#fff"
-                st.markdown(f"""
-                <div class='history-item'>
-                    <div style='font-size:11px; color:{clr}; font-weight:bold; margin-bottom:4px;'>{lbl}</div>
-                    <div style='opacity:0.8;'>{item['text'][:60]}...</div>
-                </div>""", unsafe_allow_html=True)
-        else:
-            st.markdown("<div style='font-size:13px;color:rgba(255,255,255,0.4); font-style:italic;'>No history yet.</div>", unsafe_allow_html=True)
+                clr = "#00C853" if lbl == "AI" else "#333"
+                st.markdown(f"<div style='font-size:12px; margin-bottom:8px; border-bottom:1px solid #eee; padding-bottom:5px;'><b style='color:{clr}'>{lbl}</b>: {item['text'][:40]}...</div>", unsafe_allow_html=True)
         st.markdown("</div>", unsafe_allow_html=True)
 
-# --- ADMIN PORTAL ---
+# --- ADMIN ---
 if selected == "Admin Portal":
     c1, c2 = st.columns([3, 7]) 
     with c1:
         if lottie_admin: st_lottie(lottie_admin, height=150)
     with c2:
         st.title("Admin Upload")
-        st.markdown('<p style="color:#c0c7df;font-size:16px;">Securely upload circulars to the Hybrid Knowledge Base.</p>', unsafe_allow_html=True)
+        st.markdown('<p style="color:#555;">Upload PDFs to the Knowledge Base.</p>', unsafe_allow_html=True)
 
-    st.markdown('<div class="glass-card">', unsafe_allow_html=True)
-    st.markdown('<div class="hero-badge">📁 Upload PDF Circulars</div><br><br>', unsafe_allow_html=True)
+    st.markdown('<div class="info-card">', unsafe_allow_html=True)
     pdf_docs = st.file_uploader("Select PDF Files", accept_multiple_files=True, type=['pdf'])
     
-    st.write("")
-    if st.button("Process & Upload"):
+    if st.button("Upload to Cloud"):
         if pdf_docs:
-            with st.status("Processing...", expanded=True):
+            with st.status("Uploading...", expanded=True):
                 text = ""
                 for pdf in pdf_docs:
                     with pdfplumber.open(pdf) as f:
@@ -440,25 +355,17 @@ if selected == "Admin Portal":
                 text_splitter = RecursiveCharacterTextSplitter(chunk_size=3000, chunk_overlap=200)
                 chunks = text_splitter.split_text(text)
                 get_vector_store(chunks)
-                st.success("✅ Knowledge base updated successfully!")
+                st.success("Success!")
                 time.sleep(1)
                 st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
 
-# --- ABOUT PAGE ---
+# --- ABOUT ---
 if selected == "About":
     st.title("About")
     st.markdown("""
-    <div class="glass-card">
-        <h3 style="margin-bottom:12px; font-weight: 800;">CampusMind AI</h3>
-        <p style="color:#c0c7df;font-size:15px;line-height:1.6;margin-bottom:20px;">
-            A next-gen smart campus assistant built for the Innovation Hackathon.
-        </p>
-        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-            <span class="hero-badge">💻 Streamlit</span>
-            <span class="hero-badge">🧠 OpenAI GPT-4o</span>
-            <span class="hero-badge">⚡ Gemini Flash</span>
-            <span class="hero-badge">☁️ Google Drive</span>
-        </div>
+    <div class="info-card">
+        <h3>CampusMind AI</h3>
+        <p>Built for the GDG Hackathon using Google Gemini + OpenAI.</p>
     </div>
     """, unsafe_allow_html=True)
